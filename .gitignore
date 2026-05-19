@@ -1,0 +1,36 @@
+*.sw*
+.RData
+.rhistory
+.Rhistory
+malariasimulationGD.Rcheck
+..Rcheck/
+malariasimulation_*.tar.gz
+.Rd2pdf*
+.Rproj.user
+*.Rproj
+.DS_Store
+/build/
+doc
+inst/doc
+/doc/
+/Meta/
+src/*.o
+src/*.so
+src/*.dll
+src/*.dylib
+src/symbols.rds
+
+# Generated inference sweep outputs
+test-scripts/malaria-sim-epi/output/
+
+# Local share-example dependencies and generated outputs
+test-scripts/_lib/
+test-scripts/output/
+malariasimulationGD-test-scripts-*.zip
+
+# 7-node example outputs (kept locally during runs; not for sharing).
+# Keeps the .gitkeep placeholder in each subdir so the empty folder survives.
+test-scripts/seven_node_example/output/quick/*
+!test-scripts/seven_node_example/output/quick/.gitkeep
+test-scripts/seven_node_example/output/careful/*
+!test-scripts/seven_node_example/output/careful/.gitkeep

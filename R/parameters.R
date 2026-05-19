@@ -1,0 +1,915 @@
+#' @title Get model parameters
+#' @description
+#' get_parameters creates a named list of parameters for use in the model. These
+#' parameters are passed to process functions. 
+#' 
+#' The default parameters, which are for Plasmodium falciparum, are explained in
+#' "The US President's Malaria Initiative, Plasmodium falciparum transmission
+#' and mortality: A modelling study."
+#'
+#' Plasmodium vivax specific parameters are explained in
+#' "Mathematical modelling of the impact of expanding levels of malaria control
+#' interventions on Plasmodium vivax." by White, Michael T., et al.
+#'
+#' @param overrides a named list of parameter values to use instead of defaults
+#' @param parasite Plasmodium parasite species ("falciparum" or "vivax"); default = "falciparum"
+#'
+#' The parameters are defined below.
+#'
+#' parasite parameter
+#' * parasite - parasite species (falciparum or vivax); default = "falciparum"
+#' 
+#' initial state proportions:
+#'
+#' * s_proportion - the proportion of `human_population` that begin as susceptible; default = 0.420433246
+#' * d_proportion - the proportion of `human_population` that begin with
+#' clinical disease; default = 0.007215064
+#' * a_proportion - the proportion of `human_population` that begin as
+#' asymptomatic; default = 0.439323667
+#' * u_proportion - the proportion of `human_population` that begin as
+#' subpatents; default = 0.133028023
+#' * t_proportion - the proportion of `human_population` that begin treated; default = 0
+#'
+#' human fixed state transitions:
+#'
+#' * dd - the delay for humans to move from state D to A; default = 5
+#' * dt - the delay for humans to move from state Tr to S; default = 5
+#' * da - the delay for humans to move from state A to U; default = 195
+#' * du - the delay for humans to move from state U to S (p.f only); default = 110
+#'
+#' duration of pcr detectable infections: du (p.v only):
+#'
+#' * dpcr_max - Maximum duration of PCR-detectable infections: default = 53.69
+#' * dpcr_min - Minimum duration of PCR-detectable infections: default = 10
+#' * kpcr - Shape parameter: default = 4.021
+#' * apcr50 - Scale parameter: default = 9.8
+#' 
+#' human demography parameters:
+#'
+#' * human_population - the initial number of humans to model; default = 100
+#' * average_age - the average age of humans (in timesteps), this is only used
+#' if custom_demography is FALSE; default = 7665
+#' * custom_demography - population demography given; default = FALSE
+#'
+#' initial immunity values:
+#'
+#' * init_ib  - the initial pre-erythrocitic immunity (p.f only); default = 0
+#' * init_iaa - the initial acquired anti-parasite immunity (p.v only): default = 0
+#' * init_iam - the initial anti-parasite immunity at birth (p.v only); default = 0
+#' * init_ica - the initial acquired immunity from clinical disease; default = 0
+#' * init_icm - the initial clinical immunity at birth; default = 0
+#' * init_iva - the initial acquired immunity from severe disease (p.f only); default = 0
+#' * init_ivm - the initial severe immunity from severe disease at birth (p.f only); default = 0
+#' * init_id  - the initial acquired immunity to lm detectability (p.f only); default = 0
+#'
+#' immunity decay rates:
+#'
+#' * rb - decay rate for acquired pre-erythrocytic immunity (p.f only); default = 3650
+#' * ra - decay rate for acquired anti-parasite immunity (p.v only); default = 3650
+#' * rc - decay rate for acquired immunity to clinical disease; default = 10950
+#' * rva - decay rate for acquired immunity to severe disease (p.f only); default = 10950
+#' * rm - decay rate for maternal immunity to clinical disease (or p.v: maternal clinical and anti-parasite immunities); default = 67.6952
+#' * rvm - decay rate for maternal immunity to severe disease (p.f only); default = 76.8365
+#' * rid - decay rate for acquired immunity to lm-detectability (p.f only); default = 3650
+#'
+#' immunity boost grace periods:
+#'
+#' * ub - period in which pre-erythrocytic immunity cannot be boosted (p.f only); default = 7.2
+#' * ua - period in which anti-parasite immunity cannot be boosted (p.v only); default = 44.09
+#' * uc - period in which clinical immunity cannot be boosted; default = 6.06
+#' * uv - period in which severe immunity cannot be boosted (p.f only); default = 11.4321
+#' * ud - period in which immunity to detectability cannot be boosted (p.f only); default = 9.44512
+#'
+#' maternal immunity parameters:
+#'
+#' * pcm - new-born clinical immunity (or p.v: clinical and anti-parasite immunities) relative to mother's; default = 0.774368
+#' * pvm - new-born severe immunity relative to mother's (p.f only); default = 0.195768
+#'
+#' unique biting rate:
+#'
+#' * a0 - age dependent biting parameter; default = 2920
+#' * rho - age dependent biting parameter; default = 0.85
+#' * sigma_squared - heterogeneity parameter; default = 1.67
+#' * n_heterogeneity_groups - number discretised groups for heterogeneity, used
+#' for sampling mothers; default = 5
+#' * human_slot_contact_multiplier - optional positive scalar or per-human
+#' vector used as an additional persistent human-slot contact multiplier. This
+#' can represent household/compound-level exposure heterogeneity in truth
+#' generation. Constant values scale the node's total contact rate; heterogeneous
+#' values also redistribute contacts across human slots. Values are measured
+#' relative to the reference value 1, where 1 means no additional slot-level
+#' contact effect; default = 1
+#'
+#' probability of pre-erythrocytic infection (p.f only):
+#'
+#' * b0 - maximum probability due to no immunity; default = 0.59
+#' * b1 - maximum reduction due to immunity; default = 0.5
+#' * ib0 - scale parameter; default = 43.9
+#' * kb - shape parameter; default = 2.16
+#' 
+#' probability of pre-erythrocytic infection (p.v only):
+#' * b - probability of pre-erythrocytic infection: default = 0.25
+#'
+#' probability of detection by light-microscopy when asymptomatic (p.f only):
+#'
+#' * fd0 - time-scale at which immunity changes with age; default = 0.007055
+#' * ad - scale parameter relating age to immunity; default = 7993.5
+#' * gammad - shape parameter relating age to immunity; default = 4.8183
+#' * d1 - minimum probability due to immunity; default = 0.160527
+#' * id0 - scale parameter; default = 1.577533
+#' * kd - shape parameter; default = 0.476614
+#'
+#' probability of light-microscopy detectable infections due to anti-parasite immunity (p.v only):
+#'
+#' * philm_max - maximum probability due to no immunity; default = 0.9329
+#' * philm_min - maximum reduction due to immunity; default = 0.0131
+#' * alm50 - scale parameter; default = 17.3
+#' * klm - shape parameter; default = 3.202
+#' 
+#' probability of clinical infection:
+#'
+#' * phi0 - maximum probability due to no immunity; default = 0.792
+#' * phi1 - maximum reduction due to immunity; default = 0.00074
+#' * ic0 - scale parameter; default = 18.02366
+#' * kc - shape parameter; default = 2.36949
+#'
+#' probability of severe infection (p.f only):
+#'
+#' * theta0 - maximum probability due to no immunity; default = 0.0749886
+#' * theta1 - maximum reduction due to immunity; default = 0.0001191
+#' * iv0 - scale parameter; default = 1.09629
+#' * kv - shape parameter; default = 2.00048
+#' * fv0 - age dependent modifier; default = 0.141195
+#' * av - age dependent modifier; default = 2493.41
+#' * gammav - age dependent modifier; default = 2.91282
+#'
+#' infectivity towards mosquitoes:
+#'
+#' * cd - infectivity of clinically diseased humans towards mosquitoes; default = 0.068
+#' * ca - infectivity of asymptomatic humans towards mosquitoes (p.v only); default = 0.1
+#' * gamma1 - parameter for infectivity of asymptomatic humans; default = 1.82425
+#' * cu - infectivity of subpatent infection; default = 0.0062
+#' * ct - infectivity of treated infection; default = 0.021896
+#'
+#' mosquito fixed state transitions (including mortality):
+#' 
+#' * del - the delay for mosquitoes to move from state E to L; default = 6.64
+#' * dl - the delay for mosquitoes to move from state L to P; default = 3.72
+#' * dpl - the delay mosquitoes to move from state P to Sm; default = 0.643
+#' * me - early stage larval mortality rate; default = 0.0338
+#' * ml - late stage larval mortality rate; default = 0.0348
+#' * mup - the rate at which pupal mosquitoes die; default = 0.249
+#' * mum - the rate at which developed mosquitoes die; default (An. gambiae) = .132
+#'
+#' vector biology:
+#' species specific values are vectors
+#' please set species parameters using the convenience function
+#' \code{\link{set_species}}
+#' 
+#' * beta - the average number of eggs laid per female mosquito per day; default = 21.2
+#' * total_M - the initial number of adult mosquitos in the simulation; default = 1000
+#' * init_foim - the FOIM used to calculate the equilibrium state for mosquitoes; default = 0
+#' * species - names of the species in the simulation; default = "gamb"
+#' * species_proportions - the relative proportions of each species; default = 1
+#' * blood_meal_rates - the blood meal rates for each species; default = 1/3
+#' * Q0 - proportion of blood meals taken on humans; default = 0.92
+#' * foraging_time - time spent taking blood meals; default = 0.69
+#' * contact_multiplier - legacy optional positive scalar contact multiplier.
+#'   Values are folded into `human_slot_contact_multiplier` as a uniform
+#'   per-slot multiplier for backward compatibility; default = 1
+#'
+#' seasonality and carrying capacity parameters:
+#' please set flexible carrying capacity using the convenience function
+#' \code{\link{set_carrying_capacity}}
+#' 
+#' * model_seasonality - boolean switch TRUE iff the simulation models seasonal rainfall; default = FALSE
+#' * g0 - rainfall fourier parameter; default = 2
+#' * g - rainfall fourier parameter; default = 0.3, 0.6, 0.9
+#' * h - rainfall fourier parameters; default = 0.1, 0.4, 0.7
+#' * gamma - effect of density dependence on late instars relative to early
+#' instars; default = 13.25
+#' * rainfall_floor - the minimum rainfall value (must be above 0); default 0.001
+#' * carrying_capacity; default = FALSE
+#' * carrying_capacity_timesteps; default = NULL
+#' * carrying_capacity_values; default = NULL#'
+#'
+#' parasite incubation periods:
+#'
+#' * de - duration of the human latent period of infection; default = 12
+#' * delay_gam - lag from parasites to infectious gametocytes; default = 12.5
+#' * dem - extrinsic incubation period in mosquito population model; default = 10
+#' 
+#' hypnozoite batch parameters (p.v only):
+#'
+#' * f - hypnozoite batch relapse rate; default = 0.02439024
+#' * gammal - hypnozoite batch clearance rate; default = 0.002610966
+#' * init_hyp - initial hypnozoite batch number; default = 0
+#' * kmax - maximum number of hypnozoite batches for use in the equilibrium solution; default = 10
+#' 
+#' treatment parameters:
+#' please set treatment parameters with the convenience functions
+#' \code{\link{set_drugs}} and \code{\link{set_clinical_treatment}}
+#'
+#' * drug_efficacy - a vector of efficacies for available drugs; default = turned off
+#' * drug_rel_c - a vector of relative onward infectiousness values for drugs; default = turned off
+#' * drug_prophylaxis_shape - a vector of shape parameters for weibull curves to
+#' model prophylaxis for each drug; default = turned off
+#' * drug_prophylaxis_scale - a vector of scale parameters for weibull curves to
+#' model prophylaxis for each drug; default = turned off
+#' * drug_hypnozoite_efficacy - a vector of efficacies targeting hypnozoites; default = turned off
+#' * drug_hypnozoite_prophylaxis_shape - a vector of shape parameters for weibull curves to model prophylaxis against hypnozoite batch formation (days); default = turned off
+#' * drug_hypnozoite_prophylaxis_scale - a vector of scale parameters for weibull curves to model prophylaxis against hypnozoite batch formation (days); default = turned off
+#' * clinical_treatment_drugs - a vector of drugs that are available for
+#' clinically diseased (these values refer to the index in drug_* parameters); default = NULL, NULL, NULL
+#' * clinical_treatment_coverage - a vector of coverage values for each drug; default = NULL, NULL, NULL
+#'
+#' MDA, SMC and PMC parameters:
+#' please set these parameters with the convenience functions
+#' \code{\link{set_mda}}, \code{\link{set_smc}} and \code{\link{set_pmc}},
+#' with \code{\link{peak_season_offset}}
+#'
+#' bednet, irs and mosquito feeding cycle parameters:
+#' please set vector control strategies using \code{\link{set_bednets}} and \code{\link{set_spraying}}
+#'
+#' * bednets - boolean for if bednets are enabled; default = FALSE
+#' * phi_bednets - proportion of bites taken in bed; default = 0.85
+#' * k0 - proportion of females bloodfed with no net; default = 0.699
+#' * spraying - boolean for if indoor spraying is enabled; default = FALSE
+#' * phi_indoors - proportion of bites taken indoors; default = 0.90
+#'
+#'
+#' PEV parameters:
+#' please set vaccine strategies with the convenience functions
+#' \code{\link{set_pev_epi}} and \code{\link{set_mass_pev}}
+#'
+#' * pev_doses - the dosing schedule before the vaccine takes effect; default =
+#' c(0, 1.5 * 30, 3 * 30)
+#' default = 365
+#'
+#' TBV parameters:
+#' please set TBV parameters with the convenience functions in
+#' \code{\link{set_tbv}}
+#'
+#' * tbv_mt - effect on treated infectiousness; default = 35
+#' * tbv_md - effect on diseased infectiousness; default = 46.7
+#' * tbv_ma - effect on asymptomatic infectiousness; default = 3.6
+#' * tbv_mu - effect on subpatent infectiousness; default = 0.8
+#' * tbv_k  - scale parameter for effect on infectiousness; default = 0.9
+#' * tbv_tau - peak antibody parameter; default = 22
+#' * tbv_rho - antibody component parameter; default = 0.7
+#' * tbv_ds - antibody short-term delay parameter; default = 45
+#' * tbv_dl - antibody long-term delay parameter; default = 591
+#' * tbv_tra_mu - transmission reduction parameter; default = 12.63
+#' * tbv_gamma1 - transmission reduction parameter; default = 2.5
+#' * tbv_gamma2 - transmission reduction parameter; default = 0.06
+#' 
+#' Antimalarial resistance parameters:
+#' please set antimalarial resistance parameters with the convenience functions in
+#' \code{\link{set_antimalarial_resistance}}
+#' 
+#' * antimalarial_resistance - boolean for if antimalarial resistance is enabled; default = FALSE
+#' * antimalarial_resistance_drug - vector of drugs for which resistance can be parameterised; default = NULL
+#' * antimalarial_resistance_timesteps - vector of time steps on which resistance updates occur; default = NULL
+#' * artemisinin_resistant_proportion - vector of proportions of infections resistant to the artemisinin component of a given drug; default = NULL
+#' * partner_drug_resistance_proportion - vector of proportions of infections resistant to the parter drug component of a given drug; default = NULL
+#' * slow_parasite_clearance_probability - vector of probabilities of slow parasite clearance for a given drug; default = NULL
+#' * early_treatment_failure_probability - vector of probabilities of early treatment failure for a given drug; default = NULL
+#' * late_clinical_failure_probability - vector of probabilities of late clinical failure for a given drug; default = NULL
+#' * late_parasitological_failure_probability - vector of probabilities of late parasitological failure for a given drug; default = NULL
+#' * reinfection_during_prophylaxis_probability - vector of probabilities of reinfection during prophylaxis for a given drug; default = NULL
+#' * dt_slow_parasite_clearance - the delay for humans experiencing slow parasite clearance to move from state Tr to S; default = NULL
+#'
+#' rendering:
+#' All values are in timesteps and all ranges are inclusive.
+#' Please set rendered age groups using the convenience function
+#' 
+#' * age_group_rendering_min_ages - the minimum ages for population size outputs; default = turned off
+#' * age_group_rendering_max_ages - the corresponding max ages; default = turned off
+#' * incidence_rendering_min_ages - the minimum ages for incidence
+#' outputs (includes asymptomatic microscopy +); default = turned off
+#' * incidence_rendering_max_ages - the corresponding max ages; default = turned off
+#' * clinical_incidence_rendering_min_ages - the minimum ages for clinical incidence outputs (symptomatic); default = 0
+#' * clinical_incidence_rendering_max_ages - the corresponding max ages; default = 1825
+#' * severe_incidence_rendering_min_ages - the minimum ages for severe incidence
+#' outputs; default = turned off
+#' * severe_incidence_rendering_max_ages - the corresponding max ages; default = turned off
+#' * prevalence_rendering_min_ages - the minimum ages for clinical prevalence
+#' outputs; default = 730
+#' * prevalence_rendering_max_ages - the corresponding max ages; default = 3650
+#' * n_with_hypnozoites_rendering_min_ages - the minimum ages for number with hypnozoites outputs (p.v only); default = numeric(0)
+#' * n_with_hypnozoites_rendering_max_ages - the corresponding max ages; default = numeric(0)
+#'
+#' Age structured mean immunity (/hyponozoite) rendering:
+#' 
+#' * ib_rendering_min_ages - the minimum ages for blood immunity outputs (p.f only); default = numeric(0)
+#' * ib_rendering_max_ages - the corresponding max ages; default = numeric(0)
+#' * id_rendering_min_ages - the minimum ages for acquired detectability immunity (p.f); default = numeric(0)
+#' * id_rendering_max_ages - the corresponding max ages; default = numeric(0)
+#' * iaa_rendering_min_ages - the minimum ages for antiparasite immunity (p.v only); default = numeric(0)
+#' * iam_rendering_max_ages - the corresponding max ages; default = numeric(0)
+#' * ica_rendering_min_ages - the minimum ages for acquired clinical immunity outputs; default = numeric(0)
+#' * ica_rendering_max_ages - the corresponding max ages; default = numeric(0)
+#' * iva_rendering_min_ages - the minimum ages for acquired severe immunity outputs (p.f only); default = numeric(0)
+#' * iva_rendering_max_ages - the corresponding max ages; default = numeric(0)
+#' * idm_rendering_min_ages - the minimum ages for maternal antiparasite immunity outputs (p.v only); default = numeric(0)
+#' * idm_rendering_max_ages - the corresponding max ages; default = numeric(0)
+#' * icm_rendering_min_ages - the minimum ages for maternal clinical immunity outputs; default = numeric(0)
+#' * icm_rendering_max_ages - the corresponding max ages; default = numeric(0)
+#' * ivm_rendering_min_ages - the minimum ages for maternal severe immunity outputs (p.f only); default = numeric(0)
+#' * ivm_rendering_max_ages - the corresponding max ages; default = numeric(0)
+#' * hypnozoites_rendering_min_ages - the minimum ages average hypnozoite batches outputs (p.v only); default = numeric(0)
+#' * hypnozoites_rendering_max_ages - the corresponding max ages; default = numeric(0)
+#' 
+#' mixing:
+#'
+#' * rdt_intercept - the y intercept for the log logit relationship betweeen rdt
+#' and PCR prevalence; default = -0.968
+#' * rdt_coeff - the coefficient for the log logit relationship betweeen rdt
+#' and PCR prevalence; default = 1.186
+#' 
+#' miscellaneous:
+#'
+#' * mosquito_limit - the maximum number of mosquitoes to allow for in the
+#' simulation; default = 1.00E+05
+#' * individual_mosquitoes - boolean whether adult mosquitoes are modeled
+#' individually or compartmentally; default = TRUE
+#' * native_mosquito_backend - boolean toggle for the customMGDrive2 native
+#' mosquito backend. High-level simulation entry points default this to TRUE
+#' when left NULL, while low-level helper tests can opt out explicitly;
+#' default = NULL
+#' * human_initialization - `"equilibrium"` or `"stochastic_resample"`; default
+#' = `"equilibrium"`
+#' * human_initialization_burnin_timesteps - auxiliary single-population burn-in
+#' used when `human_initialization = "stochastic_resample"`; default = 0
+#' * human_initialization_n_snapshots - number of late stochastic snapshots to
+#' pool into the stationary human library when
+#' `human_initialization = "stochastic_resample"`; default = 1
+#' * human_initialization_snapshot_spacing - spacing in timesteps between late
+#' stochastic snapshots pooled into the stationary human library; default = 0
+#' * human_initialization_library_population - optional auxiliary population size
+#' used for stochastic human initialization; default = NULL
+#' * human_initialization_seed - optional fixed seed for the auxiliary
+#' stochastic human initialization library; default = 1
+#' * human_initialization_library - optional prebuilt stationary human library
+#' object (or `.rds` path) used instead of building an auxiliary donor run on
+#' demand; may be node-conditioned; default = NULL
+#' * human_initialization_node_index - optional 1-based node index used to
+#' select a node-conditioned stationary human library entry; default = NULL
+#' * human_population_timesteps - the timesteps at which the population should
+#' change; default = 0
+#' * r_tol - the relative tolerance for the ode solver; default = 1e-4
+#' * a_tol - the absolute tolerance for the ode solver; default = 1e-4
+#' * ode_max_steps - the max number of steps for the solver; default = 1e6
+#' * enable_heterogeneity - boolean whether to include heterogeneity in biting
+#' rates; default = TRUE
+#' * cube - optional MGDrivE-style inheritance cube for adult mosquito genotype
+#' tracking in hybrid mode; default = NULL
+#' * vector_infectivity_g - optional genotype-specific mosquito-to-human
+#' transmission multipliers, applied on the human infection side after bite
+#' exposure is generated. These are relative multipliers against the internal
+#' human-side baseline transmission probability (`b0` for falciparum, `b` for
+#' vivax); default = NULL
+#' * move_probs / move_rates - optional mosquito movement probability matrix and
+#' origin rate vector for the native metapop backend; default = NULL
+#' * mosquito_move_probs / mosquito_move_rates - legacy aliases for the same
+#' mosquito movement inputs; default = NULL
+#' * human_move_probs / human_move_rates - accepted as placeholders for API
+#' compatibility, but the current individual-human shell rejects physical human
+#' movement and continues to use transmission mixing instead; default = NULL
+#' * releases - optional mosquito genotype release configuration list (see
+#' \code{\link{set_releases}}); default = NULL
+#' * debug_genotypes - print compact debug tracing for mosquito genotype release /
+#' emergence timing (development/debug only); default = FALSE
+#' * debug_genotype_timesteps - optional integer timesteps to print when
+#' debug_genotypes is TRUE; default = NULL
+#'
+#' @export
+get_parameters <- function(overrides = list(), parasite = "falciparum") {
+  
+  if(!parasite %in% c("falciparum","vivax")){stop("parasite must be 'falciparum' or 'vivax'")}
+  
+  parameters <- c(
+    # human fixed state transitions 
+    # initial immunities
+    # immunity decay rates
+    # immunity boost grace periods
+    # maternal immunity parameters
+    # probability of pre-erythrocytic infection/blood immunity
+    # probability of asymptomatic detection (p.f only)
+    # probability of light-microscopy detectable infection (due to anti-parasite immunity, p.v only)
+    # probability of clinical infection
+    # probability of severe infection (p.f only)
+    # infectivity towards mosquitos
+    # parasite incubation periods
+    # hypnozoite parameters (p.v only)
+    malariasimulationGD::parasite_parameters[[parasite]],
+    list(
+      # parasite
+      parasite = parasite,
+      # initial state proportions
+      s_proportion = 0.420433246,
+      d_proportion = 0.007215064,
+      a_proportion = 0.439323667,
+      u_proportion = 0.133028023,
+      t_proportion = 0,
+      # human demography parameters
+      human_population = 100,
+      average_age = 7663,
+      custom_demography = FALSE,
+      # unique biting rate
+      a0    = 8 * 365,
+      rho   = .85,
+      sigma_squared   = 1.67,
+      n_heterogeneity_groups = 5,
+      enable_heterogeneity = TRUE,
+      human_slot_contact_multiplier = 1,
+      # mosquito fixed state transitions (inc. mortality)
+      del   = 6.64,
+      dl    = 3.72,
+      dpl   = .643,
+      me    = .0338,
+      ml    = .0348,
+      mup   = .249,
+      mum   = .132,
+      # species-specific vector biology (default is An. gambiae s.s)
+      species             = 'gamb',
+      species_proportions = 1,
+      blood_meal_rates    = 1/3,
+      Q0                  = .92,
+      foraging_time       = .69,
+      contact_multiplier  = 1,
+      beta     = 21.2,
+      total_M  = 1000,
+      init_foim= 0,
+      # carrying capacity parameters
+      g0    = 2,
+      g     = c(.3, .6, .9),
+      h     = c(.1, .4, .7),
+      gamma = 13.25,
+      model_seasonality = FALSE,
+      rainfall_floor = 0.001,
+      # flexible carrying capacity
+      carrying_capacity = FALSE,
+      carrying_capacity_timesteps = NULL,
+      carrying_capacity_values = NULL,
+      # treatment parameters
+      drug_efficacy          = numeric(0),
+      drug_rel_c             = numeric(0),
+      drug_prophylaxis_shape = numeric(0),
+      drug_prophylaxis_scale = numeric(0),
+      drug_hypnozoite_efficacy = numeric(0),
+      drug_hypnozoite_prophylaxis_shape = numeric(0),
+      drug_hypnozoite_prophylaxis_scale = numeric(0),
+      clinical_treatment_drugs     = list(),
+      clinical_treatment_timesteps = list(),
+      clinical_treatment_coverages = list(),
+      # MDA
+      mda = FALSE,
+      mda_drug = 0,
+      mda_timesteps = NULL,
+      mda_coverages = NULL,
+      mda_min_ages = -1,
+      mda_max_ages = -1,
+      smc = FALSE,
+      smc_drug = 0,
+      smc_timesteps = NULL,
+      smc_coverages = NULL,
+      smc_min_ages = -1,
+      smc_max_ages = -1,
+      # PMC
+      pmc = FALSE,
+      pmc_drug = 0,
+      pmc_timesteps = NULL,
+      pmc_coverages = NULL,
+      pcs_ages = -1,
+      # bed nets
+      bednets = FALSE,
+      phi_bednets = .85,
+      k0 = .699,
+      initial_bednet_coverage = NULL,
+      initial_bednet_time = NULL,
+      bednet_skip_timesteps = integer(0),
+      # indoor spraying
+      spraying = FALSE,
+      phi_indoors = .90,
+      # pev
+      pev = FALSE,
+      pev_doses = c(0, 1.5 * 30, 3 * 30),
+      # tbv
+      tbv = FALSE,
+      tbv_mt = 35,
+      tbv_md = 46.7,
+      tbv_ma = 3.6,
+      tbv_mu = 0.8,
+      tbv_k = 0.9,
+      tbv_tau = 22,
+      tbv_rho = .7,
+      tbv_ds = 45,
+      tbv_dl = 591,
+      tbv_tra_mu = 12.63,
+      tbv_gamma1 = 2.5,
+      tbv_gamma2 = .06,
+      tbv_timesteps = NULL,
+      tbv_coverages = NULL,
+      tbv_ages = NULL,
+      # antimalarial resistance
+      antimalarial_resistance = FALSE,
+      antimalarial_resistance_drug = NULL,
+      antimalarial_resistance_timesteps = NULL,
+      artemisinin_resistance_proportion = NULL,
+      partner_drug_resistance_proportion = NULL,
+      slow_parasite_clearance_probability = NULL,
+      early_treatment_failure_probability = NULL,
+      late_clinical_failure_probability = NULL,
+      late_parasitological_failure_probability = NULL,
+      reinfection_during_prophylaxis_probability = NULL,
+      dt_slow_parasite_clearance = NULL,
+      # rendering
+      age_group_rendering_min_ages = numeric(0),
+      age_group_rendering_max_ages = numeric(0),
+      incidence_rendering_min_ages = numeric(0),
+      incidence_rendering_max_ages = numeric(0),
+      clinical_incidence_rendering_min_ages = numeric(0),
+      clinical_incidence_rendering_max_ages = numeric(0),
+      severe_incidence_rendering_min_ages = numeric(0),
+      severe_incidence_rendering_max_ages = numeric(0),
+      prevalence_rendering_min_ages = 2 * 365,
+      prevalence_rendering_max_ages = 10 * 365,
+      n_with_hypnozoites_rendering_min_ages = numeric(0),
+      n_with_hypnozoites_rendering_max_ages = numeric(0),
+      # age structured average immunity (/hypnozoite) rendering
+      ib_rendering_min_ages = numeric(0),
+      ib_rendering_max_ages = numeric(0),
+      id_rendering_min_ages = numeric(0),
+      id_rendering_max_ages = numeric(0),
+      ica_rendering_min_ages = numeric(0),
+      ica_rendering_max_ages = numeric(0),
+      iva_rendering_min_ages = numeric(0),
+      iva_rendering_max_ages = numeric(0),
+      idm_rendering_min_ages = numeric(0),
+      idm_rendering_max_ages = numeric(0),
+      icm_rendering_min_ages = numeric(0),
+      icm_rendering_max_ages = numeric(0),
+      ivm_rendering_min_ages = numeric(0),
+      ivm_rendering_max_ages = numeric(0),
+      hypnozoites_rendering_min_ages = numeric(0),
+      hypnozoites_rendering_max_ages = numeric(0),
+      # mixing
+      rdt_intercept = -0.968,
+      rdt_coeff = 1.186,
+      # misc
+      mosquito_limit   = 100 * 1000,
+      individual_mosquitoes = FALSE,
+      native_mosquito_backend = NULL,
+      cube = NULL,
+      vector_infectivity_g = NULL,
+      move_probs = NULL,
+      move_rates = NULL,
+      mosquito_move_probs = NULL,
+      mosquito_move_rates = NULL,
+      human_move_probs = NULL,
+      human_move_rates = NULL,
+      releases = NULL,
+      debug_genotypes = FALSE,
+      debug_genotype_timesteps = NULL,
+      human_population_timesteps = 0,
+      human_initialization = "equilibrium",
+      human_initialization_burnin_timesteps = 0L,
+      human_initialization_n_snapshots = 1L,
+      human_initialization_snapshot_spacing = 0L,
+      human_initialization_library_population = NULL,
+      human_initialization_seed = 1L,
+      human_initialization_library = NULL,
+      human_initialization_node_index = NULL,
+      r_tol = 1e-4,
+      a_tol = 1e-4,
+      ode_max_steps = 1e6,
+      progress_bar = FALSE
+    )
+  )
+  
+  # Override parameters with any client specified ones
+  if (!is.list(overrides)) {
+    stop('overrides must be a list')
+  }
+  
+  for (name in names(overrides)) {
+    if (!(name %in% names(parameters))) {
+      stop(paste('unknown parameter', name, sep=' '))
+    }
+    parameters[[name]] <- overrides[[name]]
+  }
+  
+  props <- c(
+    parameters$s_proportion,
+    parameters$d_proportion,
+    parameters$a_proportion,
+    parameters$u_proportion,
+    parameters$t_proportion
+  )
+  
+  if (!approx_sum(props, 1)) {
+    stop("Starting proportions do not sum to 1")
+  }
+  
+  parameters
+}
+
+#' @noRd
+normalize_vector_infectivity_g_entry <- function(x, required_genotypes, label) {
+  if (!is.atomic(x) || !is.numeric(x)) {
+    stop(sprintf("%s must be a named numeric vector", label))
+  }
+
+  nm <- names(x)
+  if (is.null(nm) || anyNA(nm) || any(nm == "")) {
+    stop(sprintf(
+      "%s must include genotype names matching parameters$cube$genotypesID: %s",
+      label,
+      paste(required_genotypes, collapse = ", ")
+    ))
+  }
+  if (anyDuplicated(nm)) {
+    dup <- unique(nm[duplicated(nm)])
+    stop(sprintf(
+      "%s has duplicate names: %s",
+      label,
+      paste(dup, collapse = ", ")
+    ))
+  }
+
+  missing_names <- setdiff(required_genotypes, nm)
+  if (length(missing_names) > 0) {
+    stop(sprintf(
+      "%s is missing genotype names required by parameters$cube$genotypesID: %s (required: %s)",
+      label,
+      paste(missing_names, collapse = ", "),
+      paste(required_genotypes, collapse = ", ")
+    ))
+  }
+
+  extra_names <- setdiff(nm, required_genotypes)
+  if (length(extra_names) > 0) {
+    warning(sprintf(
+      "%s has extra genotype names that will be ignored: %s",
+      label,
+      paste(extra_names, collapse = ", ")
+    ))
+  }
+
+  out <- as.numeric(x[required_genotypes])
+  names(out) <- required_genotypes
+  if (any(!is.finite(out))) {
+    stop(sprintf("%s values must be numeric and finite", label))
+  }
+  if (any(out < 0)) {
+    stop(sprintf("%s values must be >= 0", label))
+  }
+
+  out
+}
+
+#' @noRd
+transmission_reference_probability <- function(parameters) {
+  ref <- if (identical(parameters$parasite, "vivax")) parameters$b else parameters$b0
+  ref <- as.numeric(ref)[1]
+  if (!is.finite(ref) || ref <= 0 || ref > 1) {
+    stop("The human-side transmission reference probability must be in (0, 1].",
+         call. = FALSE)
+  }
+  ref
+}
+
+#' @noRd
+normalize_genotype_transmission_probability_entry <- function(x, required_genotypes, label) {
+  out <- normalize_vector_infectivity_g_entry(x, required_genotypes, label)
+  if (any(out > 1)) {
+    stop(sprintf("%s values must be in [0, 1]", label))
+  }
+  out
+}
+
+#' @noRd
+validate_vector_infectivity_g_parameters <- function(parameters) {
+  parameters$vector_infectivity_g_by_species <- NULL
+
+  # Warn if cube$c is set without the native backend where it has no effect.
+  # Neither compartmental nor individual_mosquitoes mode uses c_vec; only the
+  # native C++ engine applies genotype-specific mosquito infection rates.
+  if (!is.null(parameters$cube) && !is.null(parameters$cube$c) &&
+      !native_mosquito_backend_enabled(parameters)) {
+    warning("cube$c is set but has no effect without the native mosquito backend; ",
+            "genotype-specific mosquito infection requires native_mosquito_backend=TRUE.",
+            call. = FALSE)
+  }
+
+  vi <- parameters$vector_infectivity_g
+  if (is.null(vi)) {
+    return(parameters)
+  }
+
+  if (is.null(parameters$cube)) {
+    warning("parameters$vector_infectivity_g ignored because parameters$cube=NULL")
+    return(parameters)
+  }
+
+  if (!isTRUE(parameters$individual_mosquitoes) && !native_mosquito_backend_enabled(parameters)) {
+    stop("Genotype-specific vector_infectivity_g requires genotype-resolved mosquitoes.")
+  }
+
+  cube_info <- cube_genotype_info(parameters$cube)
+  species_names <- as.character(parameters$species)
+  resolved <- vector("list", length(species_names))
+  names(resolved) <- species_names
+
+  if (is.list(vi)) {
+    vi_names <- names(vi)
+    if (is.null(vi_names) || anyNA(vi_names) || any(vi_names == "")) {
+      stop(sprintf(
+        "parameters$vector_infectivity_g list form must be named by species: %s",
+        paste(species_names, collapse = ", ")
+      ))
+    }
+    if (anyDuplicated(vi_names)) {
+      dup <- unique(vi_names[duplicated(vi_names)])
+      stop(sprintf(
+        "parameters$vector_infectivity_g has duplicate species names: %s",
+        paste(dup, collapse = ", ")
+      ))
+    }
+
+    missing_species <- setdiff(species_names, vi_names)
+    if (length(missing_species) > 0) {
+      stop(sprintf(
+        "parameters$vector_infectivity_g is missing species entries: %s (required species: %s)",
+        paste(missing_species, collapse = ", "),
+        paste(species_names, collapse = ", ")
+      ))
+    }
+
+    extra_species <- setdiff(vi_names, species_names)
+    if (length(extra_species) > 0) {
+      warning(sprintf(
+        "parameters$vector_infectivity_g has extra species entries that will be ignored: %s",
+        paste(extra_species, collapse = ", ")
+      ))
+    }
+
+    for (sp in species_names) {
+      resolved[[sp]] <- normalize_vector_infectivity_g_entry(
+        vi[[sp]],
+        cube_info$genotypesID,
+        sprintf("parameters$vector_infectivity_g$%s", sp)
+      )
+    }
+  } else {
+    base_weights <- normalize_vector_infectivity_g_entry(
+      vi,
+      cube_info$genotypesID,
+      "parameters$vector_infectivity_g"
+    )
+    for (sp in species_names) {
+      resolved[[sp]] <- base_weights
+    }
+  }
+
+  if (cube_info$G == 1L && all(vapply(resolved, function(x) x[[1]] == 1, logical(1)))) {
+    # Preserve strict backwards compatibility for the trivial WT-only no-op case.
+    return(parameters)
+  }
+
+  parameters$vector_infectivity_g_by_species <- resolved
+  parameters
+}
+
+#' @noRd
+vector_infectivity_g_weights_for_species <- function(parameters, species_name) {
+  by_species <- parameters$vector_infectivity_g_by_species
+  if (is.null(by_species)) {
+    return(NULL)
+  }
+  by_species[[species_name]]
+}
+
+#' @noRd
+human_transmission_weights_for_species <- function(parameters, species_name) {
+  explicit <- vector_infectivity_g_weights_for_species(parameters, species_name)
+  if (!is.null(explicit)) {
+    return(explicit)
+  }
+
+  if (is.null(parameters$cube) || is.null(parameters$cube$b)) {
+    return(NULL)
+  }
+
+  probs <- normalize_genotype_transmission_probability_entry(
+    parameters$cube$b,
+    cube_genotype_info(parameters$cube)$genotypesID,
+    "parameters$cube$b"
+  )
+  probs / transmission_reference_probability(parameters)
+}
+
+#' @title Parameterise total_M and carrying capacity for mosquitos from EIR
+#'
+#' @description NOTE: the inital EIR is likely to change unless the rest of the
+#' model is in equilibrium. NOTE: please set seasonality first, since the mosquito_limit
+#' will estimate an upper bound from the peak season.
+#'
+#' max_total_M is calculated using the equilibrium solution from "Modelling the
+#' impact of vector control interventions on Anopheles gambiae population
+#' dynamics"
+#'
+#' @param parameters the parameters to modify
+#' @param EIR to work from
+#' @export
+parameterise_mosquito_equilibrium <- function(parameters, EIR) {
+  parameterise_total_M(parameters, equilibrium_total_M(parameters, EIR))
+}
+
+#' @title Parameterise total_M
+#'
+#' @description Sets total_M and an upper bound for the number of mosquitoes in
+#' the simulation. NOTE: please set seasonality first, since the mosquito_limit
+#' will estimate an upper bound from the peak season.
+#'
+#' @param parameters the parameters to modify
+#' @param total_M the initial adult mosquitoes in the simulation
+#' @export
+parameterise_total_M <- function(parameters, total_M) {
+  parameters$total_M <- total_M
+  if (!parameters$individual_mosquitoes) {
+    return(parameters)
+  }
+  max_total_M <- 0
+  for (i in seq_along(parameters$species)) {
+    species_M <- total_M * parameters$species_proportions[[i]]
+    K0 <- calculate_carrying_capacity(parameters, species_M, i)
+    R_bar <- calculate_R_bar(parameters)
+    max_K <- max(vnapply(seq(365), function(t) {
+      carrying_capacity(
+        t,
+        parameters$model_seasonality,
+        parameters$g0,
+        parameters$g,
+        parameters$h,
+        K0,
+        R_bar,
+        parameters$rainfall_floor
+      )
+    }))
+    omega <- calculate_omega(parameters, i)
+    mum <- weighted.mean(
+      vapply(
+        seq_along(parameters$species),
+        function(species_i) equilibrium_species_traits(parameters, species_i)$muF,
+        numeric(1)
+      ),
+      parameters$species_proportions
+    )
+    max_total_M <- max_total_M + max_K * (
+      1 / (
+        2 * parameters$dl * mum * (
+          1 + parameters$dpl * parameters$mup
+        )
+      )
+    ) * (
+      1 / (
+        parameters$gamma * (omega + 1)
+      )
+    ) * (
+      omega / (parameters$ml * parameters$del) - (
+        1 / (parameters$ml * parameters$dl)
+      ) - 1
+    )
+  }
+  parameters$mosquito_limit <- ceiling(max_total_M * 5) #Allow for random fluctuations
+  parameters
+}
+
+#' Use parameter draw from the join posterior
+#' 
+#' Overrides default (median) model parameters with a single draw from the fitted
+#' joint posterior. Must be called prior to set_equilibrium.
+#'
+#' @param parameters the model parameters
+#' @param draw the draw to use. Must be an integer between 1 and 1000
+#'
+#' @export
+set_parameter_draw <- function(parameters, draw){
+  
+  if(parameters$parasite == "falciparum"){
+    parameter_draws <- parameter_draws_pf
+  } else if (parameters$parasite == "vivax"){
+    parameter_draws <- parameter_draws_pv
+  }
+  
+  if(draw > 1000 || draw < 1){
+    stop("draw must be an integer between 1 and 1000")
+  }
+  parameter_draw <- parameter_draws[[draw]]
+  for (name in names(parameter_draw)) {
+    parameters[[name]] <- parameter_draw[[name]]
+  }
+  return(parameters)
+}

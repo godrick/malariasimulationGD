@@ -1,0 +1,16 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+.travis.yml
+appveyor.yml
+docker
+LICENSE.md
+codecov.yml
+.github
+^data-raw$
+^doc$
+^Meta$
+^touchstone$
+^test-scripts$

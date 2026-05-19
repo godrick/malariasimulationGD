@@ -1,0 +1,70 @@
+Package: malariasimulationGD
+Title: Working Copy of an Updated Malaria Simulation Package
+Version: 2.0.2
+Authors@R: c(
+  person(
+    given = "Godrick",
+    family = "O",
+    role = c("aut", "cre"),
+    email = "godrick@example.com"
+  ),
+  person(
+    given = "Prateek",
+    family = "V",
+    role = "aut",
+    email = "prateek@example.com"
+  )
+  )
+Author: Godrick O [aut, cre],
+  Prateek V [aut]
+Maintainer: Godrick O <godrick@example.com>
+Description: A working copy of an updated malariasimulation package for
+  msimGD development. The package is still under development, and substantial
+  changes are expected as the mosquito-genetics and release-workflow code
+  continues to evolve.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Remotes:
+  mrc-ide/malariaEquilibrium,
+  mrc-ide/malariaEquilibriumVivax,
+  mrc-ide/individual
+Additional_repositories: https://mrc-ide.r-universe.dev
+Imports:
+    individual (>= 0.1.17),
+    malariaEquilibrium (>= 1.0.1),
+    malariaEquilibriumVivax,
+    Rcpp,
+    RcppArmadillo,
+    statmod,
+    MASS,
+    dqrng (>= 0.4),
+    sitmo,
+    BH,
+    R6,
+    progress
+Suggests: 
+  testthat,
+  mockery,
+  knitr,
+  rmarkdown,
+  reshape2,
+  DiagrammeR,
+  cowplot,
+  ggplot2,
+  covr,
+  mgcv,
+  MGDrivE
+RoxygenNote: 7.3.2
+Roxygen: list(markdown = TRUE)
+LinkingTo:
+  Rcpp,
+  RcppArmadillo,
+  individual,
+  BH,
+  testthat,
+  dqrng,
+  sitmo
+VignetteBuilder: knitr
+Depends: 
+    R (>= 2.10)
