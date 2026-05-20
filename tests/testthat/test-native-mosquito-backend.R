@@ -351,6 +351,114 @@ test_that("native metapop mosquito backend shares a moving backend across nodes"
   expect_gt(sum(node2$totals[c("Sm", "Pm", "Im")]), 0)
 })
 
+test_that("native deterministic mosquito movement includes unmated females", {
+  move_probs <- matrix(c(0, 1, 0, 0), nrow = 2, byrow = TRUE)
+  move_rates <- c(0.5, 0)
+
+  p1 <- get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = FALSE,
+    total_M = 0,
+    move_probs = move_probs,
+    move_rates = move_rates
+  ))
+  p2 <- get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = FALSE,
+    total_M = 0,
+    move_probs = move_probs,
+    move_rates = move_rates
+  ))
+
+  backend <- parameterise_native_metapop_backends(list(p1, p2), timesteps = 2)
+  solver1 <- backend$solvers[[1]][[1]]
+  model1 <- backend$models[[1]][[1]]
+  idx <- model1$shared$index
+  state <- solver1$get_native_state()
+  state[] <- 0
+  state[idx$unm_ix[1, 1]] <- 100
+  solver1$set_native_state(state, t = 0)
+
+  native_mosquito_model_update(
+    backend$models[[1]][[1]],
+    timestep = 0,
+    mu = 0,
+    foim = 0,
+    f = p1$blood_meal_rates[[1]]
+  )
+  native_mosquito_model_update(
+    backend$models[[2]][[1]],
+    timestep = 0,
+    mu = 0,
+    foim = 0,
+    f = p2$blood_meal_rates[[1]]
+  )
+
+  solver1$step()
+  backend$solvers[[2]][[1]]$step()
+
+  node1 <- backend$solvers[[1]][[1]]$get_summary()
+  node2 <- backend$solvers[[2]][[1]]$get_summary()
+  expect_lt(unname(node1$unmated[[1]]), 100)
+  expect_gt(unname(node2$unmated[[1]]), 0)
+})
+
+test_that("native stochastic mosquito movement includes unmated females", {
+  move_probs <- matrix(c(0, 1, 0, 0), nrow = 2, byrow = TRUE)
+  move_rates <- c(1, 0)
+
+  p1 <- get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = TRUE,
+    total_M = 0,
+    mosquito_tau_step = 1,
+    move_probs = move_probs,
+    move_rates = move_rates
+  ))
+  p2 <- get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = TRUE,
+    total_M = 0,
+    mosquito_tau_step = 1,
+    move_probs = move_probs,
+    move_rates = move_rates
+  ))
+
+  backend <- expect_warning(
+    parameterise_native_metapop_backends(list(p1, p2), timesteps = 2),
+    "count-based tau-leap mosquito engine"
+  )
+  solver1 <- backend$solvers[[1]][[1]]
+  model1 <- backend$models[[1]][[1]]
+  idx <- model1$shared$index
+  state <- solver1$get_native_state()
+  state[] <- 0
+  state[idx$unm_ix[1, 1]] <- 1000
+  solver1$set_native_state(state, t = 0)
+
+  set.seed(1)
+  native_mosquito_model_update(
+    backend$models[[1]][[1]],
+    timestep = 0,
+    mu = 0,
+    foim = 0,
+    f = p1$blood_meal_rates[[1]]
+  )
+  native_mosquito_model_update(
+    backend$models[[2]][[1]],
+    timestep = 0,
+    mu = 0,
+    foim = 0,
+    f = p2$blood_meal_rates[[1]]
+  )
+
+  solver1$step()
+  backend$solvers[[2]][[1]]$step()
+
+  node2 <- backend$solvers[[2]][[1]]$get_summary()
+  expect_gt(unname(node2$unmated[[1]]), 0)
+})
+
 test_that("native deterministic metapop releases propagate into genotype outputs", {
   cube <- make_native_test_cube()
   base <- get_parameters(list(

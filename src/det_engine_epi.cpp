@@ -112,7 +112,7 @@ struct EpiEngine {
   mutable arma::mat W_w, mate_p_w;
   mutable arma::vec denom_w;
   mutable arma::uvec valid_w;
-  mutable arma::mat YM_w, YF_w, inbound_M_w, inbound_F_w;
+  mutable arma::mat YM_w, YU_w, YF_w, inbound_M_w, inbound_U_w, inbound_F_w;
 };
 
 // ---- Helper: access fem_ix as 4D ----
@@ -313,8 +313,10 @@ SEXP epi_engine_create(
 
   if (has_move) {
     eng->YM_w.set_size(nG, nM);
+    eng->YU_w.set_size(nG, nM);
     eng->YF_w.set_size(nFS, nM);
     eng->inbound_M_w.set_size(nG, nM);
+    eng->inbound_U_w.set_size(nG, nM);
     eng->inbound_F_w.set_size(nFS, nM);
   }
 
@@ -751,6 +753,14 @@ static void epi_compute_derivs(EpiEngine* eng, double t, double* y, double* ydot
     for (int k = 0; k < nM; k++)
       for (int g = 0; g < nG; g++)
         eng->dM_w(g, k) += eng->inbound_M_w(g, k) - eng->YM_w(g, k) * eng->move_rowsum(k);
+
+    for (int k = 0; k < nM; k++)
+      for (int g = 0; g < nG; g++)
+        eng->YU_w(g, k) = eng->U_w(g, k) * eng->move_rates(k);
+    eng->inbound_U_w = eng->YU_w * eng->move_probs;
+    for (int k = 0; k < nM; k++)
+      for (int g = 0; g < nG; g++)
+        eng->dU_w(g, k) += eng->inbound_U_w(g, k) - eng->YU_w(g, k) * eng->move_rowsum(k);
 
     // F_stack movement (all stages move together)
     int nFS = nPair * nStages;

@@ -517,6 +517,23 @@ void stoch_epi_do_step(StochEpiParams* p, double* state, double t, double dt) {
         }
       }
 
+      // Unmated females
+      for (int g = 0; g < nG; g++) {
+        double u_val = U[g + origin * nG];
+        if (u_val <= 0) continue;
+        for (int d = 0; d < nDest; d++) {
+          double p_raw = p->move_probs_flat[origin * nM + dests[d]];
+          double lam = u_val * mr * dt * p_raw;
+          if (lam > 0) {
+            int flow = static_cast<int>(R::rpois(lam));
+            if (flow > 0) {
+              dU[g + origin * nG] -= flow;
+              dU[g + dests[d] * nG] += flow;
+            }
+          }
+        }
+      }
+
       // Females (all SEI stages)
       for (int row = 0; row < nFS; row++) {
         double f_val = FS[fsi(row, origin, nFS)];
