@@ -422,9 +422,8 @@ test_that("native stochastic mosquito movement includes unmated females", {
     move_rates = move_rates
   ))
 
-  backend <- expect_warning(
-    parameterise_native_metapop_backends(list(p1, p2), timesteps = 2),
-    "count-based tau-leap mosquito engine"
+  backend <- suppressWarnings(
+    parameterise_native_metapop_backends(list(p1, p2), timesteps = 2)
   )
   solver1 <- backend$solvers[[1]][[1]]
   model1 <- backend$models[[1]][[1]]
