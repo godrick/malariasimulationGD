@@ -411,7 +411,6 @@ test_that("native stochastic mosquito movement includes unmated females", {
     native_mosquito_backend = TRUE,
     individual_mosquitoes = TRUE,
     total_M = 0,
-    mosquito_tau_step = 1,
     move_probs = move_probs,
     move_rates = move_rates
   ))
@@ -419,7 +418,6 @@ test_that("native stochastic mosquito movement includes unmated females", {
     native_mosquito_backend = TRUE,
     individual_mosquitoes = TRUE,
     total_M = 0,
-    mosquito_tau_step = 1,
     move_probs = move_probs,
     move_rates = move_rates
   ))
