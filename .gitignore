@@ -34,3 +34,4 @@ test-scripts/seven_node_example/output/quick/*
 !test-scripts/seven_node_example/output/quick/.gitkeep
 test-scripts/seven_node_example/output/careful/*
 !test-scripts/seven_node_example/output/careful/.gitkeep
+.positai

@@ -4,11 +4,6 @@
 \alias{CorrelationParameters}
 \title{Class: Correlation parameters}
 \description{
-Class: Correlation parameters
-
-Class: Correlation parameters
-}
-\details{
 This class implements functionality that allows interventions to be
 correlated, positively or negatively. By default, interventions are applied
 independently and an individual's probability of receiving two interventions
@@ -36,149 +31,160 @@ interventions) are derived in accordance with the restored data.
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-CorrelationParameters-new}{\code{CorrelationParameters$new()}}
-\item \href{#method-CorrelationParameters-inter_round_rho}{\code{CorrelationParameters$inter_round_rho()}}
-\item \href{#method-CorrelationParameters-inter_intervention_rho}{\code{CorrelationParameters$inter_intervention_rho()}}
-\item \href{#method-CorrelationParameters-sigma}{\code{CorrelationParameters$sigma()}}
-\item \href{#method-CorrelationParameters-mvnorm}{\code{CorrelationParameters$mvnorm()}}
-\item \href{#method-CorrelationParameters-save_state}{\code{CorrelationParameters$save_state()}}
-\item \href{#method-CorrelationParameters-restore_state}{\code{CorrelationParameters$restore_state()}}
-\item \href{#method-CorrelationParameters-clone}{\code{CorrelationParameters$clone()}}
-}
+  \itemize{
+    \item \href{#method-CorrelationParameters-initialize}{\code{CorrelationParameters$new()}}
+    \item \href{#method-CorrelationParameters-inter_round_rho}{\code{CorrelationParameters$inter_round_rho()}}
+    \item \href{#method-CorrelationParameters-inter_intervention_rho}{\code{CorrelationParameters$inter_intervention_rho()}}
+    \item \href{#method-CorrelationParameters-sigma}{\code{CorrelationParameters$sigma()}}
+    \item \href{#method-CorrelationParameters-mvnorm}{\code{CorrelationParameters$mvnorm()}}
+    \item \href{#method-CorrelationParameters-save_state}{\code{CorrelationParameters$save_state()}}
+    \item \href{#method-CorrelationParameters-restore_state}{\code{CorrelationParameters$restore_state()}}
+    \item \href{#method-CorrelationParameters-clone}{\code{CorrelationParameters$clone()}}
+  }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-CorrelationParameters-new"></a>}}
-\if{latex}{\out{\hypertarget{method-CorrelationParameters-new}{}}}
-\subsection{Method \code{new()}}{
-initialise correlation parameters
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CorrelationParameters$new(population, interventions)}\if{html}{\out{</div>}}
+\if{html}{\out{<a id="method-CorrelationParameters-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-CorrelationParameters-initialize}{}}}
+\subsection{\code{CorrelationParameters$new()}}{
+  initialise correlation parameters
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{CorrelationParameters$new(population, interventions)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{population}}{popularion size}
+      \item{\code{interventions}}{character vector with the name of enabled interventions}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{population}}{popularion size}
-
-\item{\code{interventions}}{character vector with the name of enabled interventions}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CorrelationParameters-inter_round_rho"></a>}}
 \if{latex}{\out{\hypertarget{method-CorrelationParameters-inter_round_rho}{}}}
-\subsection{Method \code{inter_round_rho()}}{
-Add rho between rounds
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CorrelationParameters$inter_round_rho(int, rho)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{int}}{string representing the intervention to update}
-
-\item{\code{rho}}{value between 0 and 1 representing the correlation between rounds of
+\subsection{\code{CorrelationParameters$inter_round_rho()}}{
+  Add rho between rounds
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{CorrelationParameters$inter_round_rho(int, rho)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{int}}{string representing the intervention to update}
+      \item{\code{rho}}{value between 0 and 1 representing the correlation between rounds of
 the intervention}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
-\if{html}{\out{</div>}}
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CorrelationParameters-inter_intervention_rho"></a>}}
 \if{latex}{\out{\hypertarget{method-CorrelationParameters-inter_intervention_rho}{}}}
-\subsection{Method \code{inter_intervention_rho()}}{
-Add rho between interventions
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CorrelationParameters$inter_intervention_rho(int_1, int_2, rho)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{int_1}}{string representing the first intervention}
-
-\item{\code{int_2}}{string representing the second intervention (intechangable
+\subsection{\code{CorrelationParameters$inter_intervention_rho()}}{
+  Add rho between interventions
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{CorrelationParameters$inter_intervention_rho(int_1, int_2, rho)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{int_1}}{string representing the first intervention}
+      \item{\code{int_2}}{string representing the second intervention (intechangable
 with int_1)}
-
-\item{\code{rho}}{value between -1 and 1 representing the correlation between rounds of
+      \item{\code{rho}}{value between -1 and 1 representing the correlation between rounds of
 the intervention}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
-\if{html}{\out{</div>}}
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CorrelationParameters-sigma"></a>}}
 \if{latex}{\out{\hypertarget{method-CorrelationParameters-sigma}{}}}
-\subsection{Method \code{sigma()}}{
-Standard deviation of each intervention between rounds
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CorrelationParameters$sigma()}\if{html}{\out{</div>}}
+\subsection{\code{CorrelationParameters$sigma()}}{
+  Standard deviation of each intervention between rounds
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{CorrelationParameters$sigma()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CorrelationParameters-mvnorm"></a>}}
 \if{latex}{\out{\hypertarget{method-CorrelationParameters-mvnorm}{}}}
-\subsection{Method \code{mvnorm()}}{
-multivariate norm draws for these parameters
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CorrelationParameters$mvnorm()}\if{html}{\out{</div>}}
+\subsection{\code{CorrelationParameters$mvnorm()}}{
+  multivariate norm draws for these parameters
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{CorrelationParameters$mvnorm()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CorrelationParameters-save_state"></a>}}
 \if{latex}{\out{\hypertarget{method-CorrelationParameters-save_state}{}}}
-\subsection{Method \code{save_state()}}{
-Save the correlation state.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CorrelationParameters$save_state()}\if{html}{\out{</div>}}
+\subsection{\code{CorrelationParameters$save_state()}}{
+  Save the correlation state.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{CorrelationParameters$save_state()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CorrelationParameters-restore_state"></a>}}
 \if{latex}{\out{\hypertarget{method-CorrelationParameters-restore_state}{}}}
-\subsection{Method \code{restore_state()}}{
-Restore the correlation state.
+\subsection{\code{CorrelationParameters$restore_state()}}{
+  Restore the correlation state.
 
 Only the randomly drawn weights are restored. The object needs to be
 initialized with the same rhos.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CorrelationParameters$restore_state(timestep, state)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{timestep}}{the timestep at which simulation is resumed. This
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{CorrelationParameters$restore_state(timestep, state)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{timestep}}{the timestep at which simulation is resumed. This
 parameter's value is ignored, it only exists to conform to a uniform
 interface.}
-
-\item{\code{state}}{a previously saved correlation state, as returned by the
+      \item{\code{state}}{a previously saved correlation state, as returned by the
 save_state method.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
-\if{html}{\out{</div>}}
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CorrelationParameters-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-CorrelationParameters-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CorrelationParameters$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{CorrelationParameters$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{CorrelationParameters$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }
