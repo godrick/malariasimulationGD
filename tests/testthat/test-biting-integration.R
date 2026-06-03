@@ -60,7 +60,8 @@ test_that('biting_process integrates mosquito effects and human infection', {
     lagged_eir,
     NULL,
     1,
-    lagged_eir
+    lagged_eir,
+    NULL
   )
 
   mockery::expect_args(
