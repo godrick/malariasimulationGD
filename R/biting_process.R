@@ -53,7 +53,30 @@ create_biting_process <- function(
       lagged_transmission_eir,
       human_exposure_lag_context
     )
-    
+
+    if (human_mobility_enabled(parameters)) {
+      infection_input <- human_exposure_lag_get_infection_input(
+        human_exposure_lag_context,
+        mixing_index,
+        timestep,
+        parameters
+      )
+      simulate_infection(
+        variables,
+        events,
+        bitten$bitten_humans,
+        bitten$n_bites_per_person,
+        age,
+        parameters,
+        timestep,
+        renderer,
+        infection_outcome,
+        infection_input$transmission_multiplier,
+        infection_exposure = infection_input$infection_exposure
+      )
+      return(invisible(NULL))
+    }
+
     simulate_infection(
       variables,
       events,
