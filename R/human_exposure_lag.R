@@ -310,6 +310,61 @@ human_exposure_lag_record_node <- function(context, node_index, timestep, exposu
   invisible(NULL)
 }
 
+human_exposure_lag_validate_infection_vector <- function(values, expected_length, label) {
+  values <- as.numeric(values)
+  if (length(values) != expected_length ||
+      anyNA(values) ||
+      any(!is.finite(values)) ||
+      any(values < 0)) {
+    stop(sprintf("%s must be a nonnegative finite numeric vector matching the human population.", label), call. = FALSE)
+  }
+  values
+}
+
+human_exposure_lag_get_infection_input <- function(context, node_index, timestep, parameters) {
+  if (is.null(context)) {
+    stop("Explicit human mobility requires a human exposure lag context.", call. = FALSE)
+  }
+
+  node_index <- as.integer(node_index)
+  if (length(node_index) != 1L ||
+      is.na(node_index) ||
+      node_index < 1L ||
+      node_index > length(context$buffers)) {
+    stop("node_index must select one human exposure lag buffer.", call. = FALSE)
+  }
+
+  lookup_timestep <- timestep - parameters$de
+  exposure <- context$buffers[[node_index]]$get(lookup_timestep)
+  exposure <- human_exposure_lag_validate_infection_vector(
+    exposure,
+    parameters$human_population,
+    "Delayed human infection exposure"
+  )
+
+  weighted_exposure <- NULL
+  transmission_multiplier <- 1
+  if (isTRUE(context$weighted_active)) {
+    weighted_exposure <- context$buffers[[node_index]]$get(lookup_timestep, weighted = TRUE)
+    weighted_exposure <- human_exposure_lag_validate_infection_vector(
+      weighted_exposure,
+      parameters$human_population,
+      "Delayed weighted human infection exposure"
+    )
+
+    transmission_multiplier <- rep.int(1, length(exposure))
+    positive_exposure <- exposure > 0
+    transmission_multiplier[positive_exposure] <- weighted_exposure[positive_exposure] /
+      exposure[positive_exposure]
+  }
+
+  list(
+    infection_exposure = exposure,
+    weighted_exposure = weighted_exposure,
+    transmission_multiplier = transmission_multiplier
+  )
+}
+
 human_exposure_lag_clear <- function(context, node_index, target) {
   if (is.null(context)) {
     return(invisible(NULL))
