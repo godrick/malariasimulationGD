@@ -37,6 +37,14 @@ human transmission multiplier among infectious females when
 \item n_treated: number of humans treated for clinical or severe malaria this timestep
 \item n_infections: number of humans who get an asymptomatic, clinical or severe malaria this timestep
 \item natural_deaths: number of humans who die from aging
+\item humans_present: number of humans physically present in a node when
+explicit human mobility is enabled
+\item visitors_present: number of present humans whose home node differs from
+the rendered node when explicit human mobility is enabled
+\item residents_away: number of residents physically away from their home node
+when explicit human mobility is enabled
+\item trips_started: number of residents who started an off-home trip this
+timestep when explicit human mobility is enabled
 \item S_count: number of humans who are Susceptible
 \item A_count: number of humans who are Asymptomatic
 \item D_count: number of humans who have the clinical malaria
