@@ -24,6 +24,8 @@
 #' lagged transmission lists (default: 1)
 #' @param human_mobility_context shared explicit human mobility context for
 #' native metapopulation runs
+#' @param human_exposure_lag_context shared per-human exposure lag context for
+#' explicit mobility
 #' @noRd
 create_processes <- function(
     renderer,
@@ -40,7 +42,8 @@ create_processes <- function(
     mixing_index = 1,
     lagged_transmission_eir = lagged_eir,
     enable_rendering = TRUE,
-    human_mobility_context = NULL
+    human_mobility_context = NULL,
+    human_exposure_lag_context = NULL
 ) {
   
   # ========
@@ -172,7 +175,8 @@ create_processes <- function(
       mixing_fn = mixing_fn,
       mixing_index = mixing_index,
       infection_outcome = infection_outcome,
-      lagged_transmission_eir = lagged_transmission_eir
+      lagged_transmission_eir = lagged_transmission_eir,
+      human_exposure_lag_context = human_exposure_lag_context
     )
   )
   
@@ -386,7 +390,8 @@ create_processes <- function(
       variables,
       events,
       renderer,
-      parameters
+      parameters,
+      human_exposure_lag_context = human_exposure_lag_context
     )
   )
 
