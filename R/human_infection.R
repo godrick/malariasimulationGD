@@ -138,6 +138,11 @@ human_infection_exposure_target <- function(infection_exposure) {
 
 human_infection_transmission_multiplier <- function(transmission_multiplier, source_vector, parameters) {
   transmission_multiplier <- as.numeric(transmission_multiplier)
+  if (anyNA(transmission_multiplier) ||
+      any(!is.finite(transmission_multiplier)) ||
+      any(transmission_multiplier < 0)) {
+    stop("`transmission_multiplier` must be nonnegative and finite.")
+  }
   if (length(transmission_multiplier) == 1L) {
     return(rep(transmission_multiplier, length(source_vector)))
   }
