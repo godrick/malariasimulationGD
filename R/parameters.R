@@ -373,9 +373,22 @@
 #' origin rate vector for the native metapop backend; default = NULL
 #' * mosquito_move_probs / mosquito_move_rates - legacy aliases for the same
 #' mosquito movement inputs; default = NULL
-#' * human_move_probs / human_move_rates - accepted as placeholders for API
-#' compatibility, but the current individual-human shell rejects physical human
-#' movement and continues to use transmission mixing instead; default = NULL
+#' * human_mobility_enabled - boolean switch for explicit R-layer overnight
+#' human mobility in the native metapopulation backend; default = FALSE
+#' * human_mobility_mode - human mobility implementation mode. Stage 1 supports
+#' only `"explicit"`; default = `"explicit"`
+#' * human_move_probs - optional shared row-stochastic matrix where element
+#' `[i, j]` is the probability that a resident of node `i` sleeps in node `j`;
+#' default = NULL
+#' * human_move_rates - unsupported physical native-backend human movement rates;
+#' rejected when supplied; default = NULL
+#' * human_trip_duration_type - trip duration family for future explicit
+#' mobility dynamics. Stage 1 validates `"fixed"` and `"geometric"` only;
+#' default = `"fixed"`
+#' * human_trip_duration_mean - mean trip duration in nights. Must be a positive
+#' integer for fixed trips and numeric >= 1 for geometric trips; default = 1
+#' * human_mobility_store_diagnostics - boolean switch for future optional
+#' mobility diagnostics; default = FALSE
 #' * releases - optional mosquito genotype release configuration list (see
 #' \code{\link{set_releases}}); default = NULL
 #' * debug_genotypes - print compact debug tracing for mosquito genotype release /
@@ -567,8 +580,13 @@ get_parameters <- function(overrides = list(), parasite = "falciparum") {
       move_rates = NULL,
       mosquito_move_probs = NULL,
       mosquito_move_rates = NULL,
+      human_mobility_enabled = FALSE,
+      human_mobility_mode = "explicit",
       human_move_probs = NULL,
       human_move_rates = NULL,
+      human_trip_duration_type = "fixed",
+      human_trip_duration_mean = 1,
+      human_mobility_store_diagnostics = FALSE,
       releases = NULL,
       debug_genotypes = FALSE,
       debug_genotype_timesteps = NULL,
