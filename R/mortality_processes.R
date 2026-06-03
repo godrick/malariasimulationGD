@@ -128,6 +128,15 @@ reset_target <- function(variables, events, target, state, parameters, timestep)
     # onwards infectiousness
     variables$infectivity$queue_update(0, target)
     variables$progression_rates$queue_update(0, target)
+
+    # explicit R-layer mobility state resets to permanent home on rebirth.
+    if (!is.null(variables$home_node)) {
+      home_node <- variables$home_node$get_values(target)
+      variables$current_node$queue_update(home_node, target)
+      variables$travel_destination$queue_update(home_node, target)
+      variables$travel_remaining_nights$queue_update(0L, target)
+      variables$is_travelling$queue_update(0L, target)
+    }
     
     # zeta, zeta group, human slot contact multiplier, and vector controls
     # survive rebirth.
