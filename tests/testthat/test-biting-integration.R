@@ -80,6 +80,89 @@ test_that('biting_process integrates mosquito effects and human infection', {
   )
 })
 
+test_that('biting_process passes delayed human exposure when mobility is enabled', {
+  population <- 2
+  timestep <- 5
+  parameters <- get_parameters(
+    list(
+      human_population = population,
+      human_mobility_enabled = TRUE,
+      de = 1
+    )
+  )
+
+  renderer <- individual::Render$new(5)
+  events <- mockery::mock()
+  age <- c(20, 24) * 365
+  variables <- list(birth = individual::DoubleVariable$new((-age + timestep)))
+  lagged_foim <- LaggedValue$new(1, 1)
+  lagged_eir <- LaggedValue$new(1, 1)
+  models <- list()
+  solvers <- list()
+  infection_outcome <- CompetingOutcome$new(
+    targeted_process = function(timestep, target) invisible(NULL),
+    size = parameters$human_population
+  )
+  human_exposure_lag_context <- new.env(parent = emptyenv())
+  human_exposure_lag_context$weighted_active <- FALSE
+  human_exposure_lag_context$buffers <- list(HumanExposureLagBuffer$new(
+    max_lag = 2,
+    default_exposure = rep(0, population)
+  ))
+  human_exposure_lag_context$buffers[[1L]]$save(timestep - parameters$de, c(2, 0))
+
+  biting_process <- create_biting_process(
+    renderer,
+    solvers,
+    models,
+    variables,
+    events,
+    parameters,
+    lagged_foim,
+    lagged_eir,
+    infection_outcome = infection_outcome,
+    human_exposure_lag_context = human_exposure_lag_context
+  )
+
+  bitten <- list(
+    bitten_humans = individual::Bitset$new(parameters$human_population),
+    n_bites_per_person = numeric(0),
+    transmission_multiplier = 99
+  )
+  bites_mock <- mockery::mock(bitten, cycle = TRUE)
+  infection_mock <- mockery::mock()
+
+  mockery::stub(biting_process, 'simulate_bites', bites_mock)
+  mockery::stub(biting_process, 'simulate_infection', infection_mock)
+  biting_process(timestep)
+
+  mockery::expect_args(
+    bites_mock,
+    1,
+    renderer,
+    solvers,
+    models,
+    variables,
+    events,
+    age,
+    parameters,
+    timestep,
+    lagged_foim,
+    lagged_eir,
+    NULL,
+    1,
+    lagged_eir,
+    human_exposure_lag_context
+  )
+
+  infection_args <- mockery::mock_args(infection_mock)[[1L]]
+  expect_identical(infection_args[[1L]], variables)
+  expect_identical(infection_args[[3L]], bitten$bitten_humans)
+  expect_identical(infection_args[[9L]], infection_outcome)
+  expect_equal(infection_args[[10L]], 1)
+  expect_equal(infection_args$infection_exposure, c(2, 0))
+})
+
 test_that('simulate_bites integrates eir calculation and mosquito side effects', {
   population <- 4
   timestep <- 5
