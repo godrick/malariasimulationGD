@@ -16,6 +16,7 @@
 #' @param mixing_index an index for this population's position in the
 #' lagged_infectivity list (default: 1)
 #' @param infection_outcome competing hazards object for infection rates
+#' @param human_exposure_lag_context optional per-human exposure lag context
 #' @param timestep the current timestep
 #' @noRd
 create_biting_process <- function(
@@ -30,7 +31,8 @@ create_biting_process <- function(
   mixing_fn = NULL,
   mixing_index = 1,
   infection_outcome,
-  lagged_transmission_eir = lagged_eir
+  lagged_transmission_eir = lagged_eir,
+  human_exposure_lag_context = NULL
   ) {
   function(timestep) {
     # Calculate combined EIR
@@ -48,7 +50,8 @@ create_biting_process <- function(
       lagged_eir,
       mixing_fn,
       mixing_index,
-      lagged_transmission_eir
+      lagged_transmission_eir,
+      human_exposure_lag_context
     )
     
     simulate_infection(
@@ -80,7 +83,8 @@ simulate_bites <- function(
   lagged_eir,
   mixing_fn = NULL,
   mixing_index = 1,
-  lagged_transmission_eir = lagged_eir
+  lagged_transmission_eir = lagged_eir,
+  human_exposure_lag_context = NULL
   ) {
   bitten_humans <- individual::Bitset$new(parameters$human_population)
   n_bites_per_person <- numeric(0)
@@ -158,6 +162,8 @@ simulate_bites <- function(
   
   EIR <- 0
   transmission_signal <- 0
+  current_exposure <- 0
+  current_weighted_exposure <- 0
 
   for (s_i in seq_along(parameters$species)) {
     species_name <- parameters$species[[s_i]]
@@ -252,14 +258,18 @@ simulate_bites <- function(
     # transmission signal for later. The latter is used only to scale infection
     # probability after bites are generated, matching the Imperial-style
     # genotype-specific b0 semantics.
+    species_exposure <- n_infectious * a
+    species_weighted_exposure <- n_transmission_infectious * a
     lagged_eir[[s_i]]$save(
-      n_infectious * a,
+      species_exposure,
       timestep
     )
     lagged_transmission_eir[[s_i]]$save(
-      n_transmission_infectious * a,
+      species_weighted_exposure,
       timestep
     )
+    current_exposure <- current_exposure + species_exposure
+    current_weighted_exposure <- current_weighted_exposure + species_weighted_exposure
 
     # lagged EIR
     if (is.null(mixing_fn)) {
@@ -459,6 +469,14 @@ simulate_bites <- function(
       }
     }
   }
+
+  human_exposure_lag_record_node(
+    human_exposure_lag_context,
+    mixing_index,
+    timestep,
+    current_exposure,
+    current_weighted_exposure
+  )
 
   transmission_multiplier <- if (EIR > 0) transmission_signal / EIR else 1
 
