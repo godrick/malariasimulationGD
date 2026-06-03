@@ -28,6 +28,13 @@
 #' slots. Values are measured relative to the reference value 1 and survive
 #' rebirth. Scalar legacy `contact_multiplier` values are folded into this
 #' variable during initialization.
+#' * home_node - Permanent home node for explicit R-layer human mobility
+#' * current_node - Node where a human sleeps for the current timestep exposure
+#' * travel_destination - Current trip destination node, or home node when not
+#' travelling
+#' * travel_remaining_nights - Number of away exposures still owed; -1 is an
+#' internal one-timestep cooldown after returning home
+#' * is_travelling - Integer 0/1 flag for current active overnight trips
 #' * last_pev_timestep - The timestep of the last pev vaccination (-1 if there
 #' * last_eff_pev_timestep - The timestep of the last efficacious pev
 #' vaccination, including final primary dose and booster doses (-1 if there have not been any)
@@ -453,6 +460,18 @@ create_variables <- function(parameters) {
     variables,
     human_slot_contact_multiplier = human_slot_contact_multiplier
   )
+
+  if (isTRUE(parameters$human_mobility_enabled)) {
+    node_id <- as.integer(if (is.null(parameters$human_mobility_node_index)) 1L else parameters$human_mobility_node_index)
+    variables <- c(
+      variables,
+      home_node = individual::IntegerVariable$new(rep.int(node_id, size)),
+      current_node = individual::IntegerVariable$new(rep.int(node_id, size)),
+      travel_destination = individual::IntegerVariable$new(rep.int(node_id, size)),
+      travel_remaining_nights = individual::IntegerVariable$new(rep.int(0L, size)),
+      is_travelling = individual::IntegerVariable$new(rep.int(0L, size))
+    )
+  }
   
   # Add variables for individual mosquitoes
   if (legacy_individual_mosquito_backend_enabled(parameters)) {
