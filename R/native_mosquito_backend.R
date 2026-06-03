@@ -259,6 +259,16 @@ human_mobility_validate_parameters <- function(parameters, n_nodes = length(para
       stop('`human_mobility_mode` must be "explicit".')
     }
     human_mobility_validate_trip_duration(parameters[[i]])
+    if (isTRUE(human_mobility_value(parameters[[i]], "human_mobility_enabled", FALSE))) {
+      de <- human_mobility_value(parameters[[i]], "de", NA_real_)
+      if (!is.numeric(de) ||
+          length(de) != 1L ||
+          is.na(de) ||
+          !is.finite(de) ||
+          de <= 0) {
+        stop("Explicit human mobility requires `de` to be a positive numeric value greater than 0.")
+      }
+    }
     if (!is.null(parameters[[i]]$human_move_rates)) {
       stop("`human_move_rates` is not supported for Stage 1 explicit human mobility.")
     }
