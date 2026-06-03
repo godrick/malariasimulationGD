@@ -22,6 +22,8 @@
 #' @param mixing_fn function to retrieve mixed EIR and infectivity values
 #' @param mixing_index an index for this population's position in the
 #' lagged transmission lists (default: 1)
+#' @param human_mobility_context shared explicit human mobility context for
+#' native metapopulation runs
 #' @noRd
 create_processes <- function(
     renderer,
@@ -37,7 +39,8 @@ create_processes <- function(
     mixing_fn = NULL,
     mixing_index = 1,
     lagged_transmission_eir = lagged_eir,
-    enable_rendering = TRUE
+    enable_rendering = TRUE,
+    human_mobility_context = NULL
 ) {
   
   # ========
@@ -103,6 +106,17 @@ create_processes <- function(
         )
       )
     }
+  }
+
+  if (human_mobility_enabled(parameters)) {
+    processes <- c(
+      processes,
+      human_mobility_process = create_human_mobility_process(
+        context = human_mobility_context,
+        node_index = parameters$human_mobility_node_index,
+        renderer = renderer
+      )
+    )
   }
   
   # =====================================================
