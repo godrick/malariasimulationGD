@@ -21,6 +21,14 @@
 #'  * n_treated: number of humans treated for clinical or severe malaria this timestep
 #'  * n_infections: number of humans who get an asymptomatic, clinical or severe malaria this timestep
 #'  * natural_deaths: number of humans who die from aging
+#'  * humans_present: number of humans physically present in a node when
+#' explicit human mobility is enabled
+#'  * visitors_present: number of present humans whose home node differs from
+#' the rendered node when explicit human mobility is enabled
+#'  * residents_away: number of residents physically away from their home node
+#' when explicit human mobility is enabled
+#'  * trips_started: number of residents who started an off-home trip this
+#' timestep when explicit human mobility is enabled
 #'  * S_count: number of humans who are Susceptible
 #'  * A_count: number of humans who are Asymptomatic
 #'  * D_count: number of humans who have the clinical malaria
@@ -463,6 +471,24 @@ run_metapop_simulation <- function(
     }
     p
   })
+  validate_explicit_human_mobility_metapop(
+    parameters = parameters,
+    export_mixing = export_mixing,
+    import_mixing = import_mixing,
+    p_captured = p_captured,
+    p_success = p_success
+  )
+  human_mobility_move_probs <- human_mobility_resolve_move_probs(parameters)
+  if (!is.null(human_mobility_move_probs)) {
+    parameters <- lapply(seq_along(parameters), function(i) {
+      p <- parameters[[i]]
+      p$human_mobility_enabled <- TRUE
+      p$human_move_probs <- human_mobility_move_probs
+      p$human_mobility_node_index <- as.integer(i)
+      p$human_mobility_n_nodes <- as.integer(length(parameters))
+      p
+    })
+  }
   metapop_stationary_initialization_context <- NULL
   if (is.null(initial_state)) {
     metapop_initialization <- stationary_human_initializer_prepare_metapop_parameters(parameters)
@@ -540,6 +566,12 @@ run_metapop_simulation <- function(
   if (isTRUE(render_output)) {
     populate_metapopulation_incidence_rendering_columns(renderer, parameters)
   }
+  human_mobility_context <- create_human_mobility_context(
+    parameters = parameters,
+    variables = variables,
+    timesteps = timesteps,
+    render_output = render_output
+  )
   for (i in seq_along(parameters)) {
     # NOTE: forceAndCall is necessary here to make sure i refers to the current
     # iteration
@@ -661,7 +693,8 @@ run_metapop_simulation <- function(
         mixing_fn = mixing_fn,
         mixing_index = i,
         lagged_transmission_eir = lagged_transmission_eir[[i]],
-        enable_rendering = render_output
+        enable_rendering = render_output,
+        human_mobility_context = human_mobility_context
       )
     }
   )
@@ -755,6 +788,11 @@ run_metapop_simulation <- function(
   } else {
     NULL
   }
+  outputs <- attach_human_mobility_diagnostics(
+    outputs,
+    human_mobility_context,
+    initial_timesteps = if (!is.null(initial_state)) initial_state$timesteps else NULL
+  )
 
   if (!isTRUE(return_state)) {
     if (isTRUE(return_summary)) {
