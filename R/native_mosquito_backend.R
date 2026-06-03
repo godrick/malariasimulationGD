@@ -144,17 +144,187 @@ native_collect_shared_value <- function(parameters, primary, fallback = NULL) {
   out
 }
 
-native_validate_human_movement <- function(parameters) {
-  for (i in seq_along(parameters)) {
-    if (!is.null(parameters[[i]]$human_move_probs) || !is.null(parameters[[i]]$human_move_rates)) {
-      stop(
-        paste(
-          "The native mosquito backend keeps the malariasimulationgd-old human shell.",
-          "Physical `human_move_probs`/`human_move_rates` are not supported here;",
-          "use run_metapop_simulation() export/import mixing instead."
-        )
-      )
+human_mobility_enabled_any <- function(parameters) {
+  any(vapply(parameters, function(p) isTRUE(p$human_mobility_enabled), logical(1)))
+}
+
+human_mobility_value <- function(parameters, name, default) {
+  value <- parameters[[name]]
+  if (is.null(value)) {
+    return(default)
+  }
+  value
+}
+
+human_mobility_validate_scalar_logical <- function(value, name) {
+  if (!is.logical(value) || length(value) != 1L || is.na(value)) {
+    stop(sprintf("`%s` must be TRUE or FALSE.", name))
+  }
+}
+
+human_mobility_validate_trip_duration <- function(parameters) {
+  duration_type <- human_mobility_value(parameters, "human_trip_duration_type", "fixed")
+  if (!is.character(duration_type) ||
+      length(duration_type) != 1L ||
+      !(duration_type %in% c("fixed", "geometric"))) {
+    stop('`human_trip_duration_type` must be "fixed" or "geometric".')
+  }
+
+  duration_mean <- human_mobility_value(parameters, "human_trip_duration_mean", 1)
+  if (!is.numeric(duration_mean) ||
+      length(duration_mean) != 1L ||
+      is.na(duration_mean) ||
+      !is.finite(duration_mean)) {
+    stop("`human_trip_duration_mean` must be a finite numeric scalar.")
+  }
+
+  if (identical(duration_type, "fixed") &&
+      (duration_mean < 1 || !isTRUE(all.equal(duration_mean, as.integer(duration_mean))))) {
+    stop('`human_trip_duration_mean` must be a positive integer >= 1 when `human_trip_duration_type = "fixed"`.')
+  }
+
+  if (identical(duration_type, "geometric") && duration_mean < 1) {
+    stop('`human_trip_duration_mean` must be numeric and >= 1 when `human_trip_duration_type = "geometric"`.')
+  }
+}
+
+human_mobility_validate_matrix <- function(move_probs, n_nodes) {
+  if (!is.matrix(move_probs) || !is.numeric(move_probs)) {
+    stop("`human_move_probs` must be a numeric matrix.")
+  }
+  if (nrow(move_probs) != ncol(move_probs)) {
+    stop("`human_move_probs` must be square.")
+  }
+  if (!all(dim(move_probs) == c(n_nodes, n_nodes))) {
+    stop("`human_move_probs` must have dimension n_nodes x n_nodes.")
+  }
+  if (anyNA(move_probs)) {
+    stop("`human_move_probs` must not contain missing values.")
+  }
+  if (!all(is.finite(move_probs))) {
+    stop("`human_move_probs` must contain only finite values.")
+  }
+  if (any(move_probs < 0)) {
+    stop("`human_move_probs` must not contain negative entries.")
+  }
+  if (!all(vlapply(seq_len(n_nodes), function(i) approx_sum(move_probs[i, ], 1)))) {
+    stop("Each row of `human_move_probs` must sum to 1.")
+  }
+}
+
+human_mobility_collect_move_probs <- function(parameters, n_nodes) {
+  move_probs <- Filter(
+    Negate(is.null),
+    lapply(parameters, function(p) p$human_move_probs)
+  )
+  if (length(move_probs) == 0L) {
+    stop("`human_move_probs` must be provided when `human_mobility_enabled = TRUE`.")
+  }
+
+  for (matrix_i in seq_along(move_probs)) {
+    human_mobility_validate_matrix(move_probs[[matrix_i]], n_nodes)
+  }
+
+  shared <- move_probs[[1L]]
+  if (length(move_probs) > 1L) {
+    for (matrix_i in seq_along(move_probs)[-1L]) {
+      if (!isTRUE(all.equal(
+        move_probs[[matrix_i]],
+        shared,
+        check.attributes = FALSE,
+        tolerance = sqrt(.Machine$double.eps)
+      ))) {
+        stop("All non-NULL `human_move_probs` matrices must be identical.")
+      }
     }
+  }
+
+  shared
+}
+
+human_mobility_resolve_move_probs <- function(parameters, n_nodes = length(parameters)) {
+  if (!human_mobility_enabled_any(parameters)) {
+    return(NULL)
+  }
+  human_mobility_collect_move_probs(parameters, n_nodes)
+}
+
+human_mobility_validate_parameters <- function(parameters, n_nodes = length(parameters)) {
+  for (i in seq_along(parameters)) {
+    human_mobility_validate_scalar_logical(
+      human_mobility_value(parameters[[i]], "human_mobility_enabled", FALSE),
+      "human_mobility_enabled"
+    )
+    if (!identical(human_mobility_value(parameters[[i]], "human_mobility_mode", "explicit"), "explicit")) {
+      stop('`human_mobility_mode` must be "explicit".')
+    }
+    human_mobility_validate_trip_duration(parameters[[i]])
+    if (!is.null(parameters[[i]]$human_move_rates)) {
+      stop("`human_move_rates` is not supported for Stage 1 explicit human mobility.")
+    }
+  }
+
+  if (human_mobility_enabled_any(parameters)) {
+    human_mobility_collect_move_probs(parameters, n_nodes)
+  }
+}
+
+human_mobility_identity_matrix <- function(matrix, n_nodes) {
+  matrix <- as.matrix(matrix)
+  all(dim(matrix) == c(n_nodes, n_nodes)) &&
+    all(abs(matrix - diag(n_nodes)) < sqrt(.Machine$double.eps))
+}
+
+human_mobility_validate_identity_mixing <- function(mixing, n_nodes, label) {
+  for (i in seq_along(mixing)) {
+    if (!human_mobility_identity_matrix(mixing[[i]], n_nodes)) {
+      stop(sprintf("Explicit human mobility requires identity `%s` matrices.", label))
+    }
+  }
+}
+
+human_mobility_validate_zero_capture <- function(p_captured, n_nodes, p_success) {
+  for (i in seq_along(p_captured)) {
+    p_captured_i <- as.matrix(p_captured[[i]])
+    if (!all(dim(p_captured_i) == c(n_nodes, n_nodes))) {
+      stop("Explicit human mobility requires `p_captured` matrices to be n_nodes x n_nodes.")
+    }
+    if (any(abs(p_captured_i) >= sqrt(.Machine$double.eps))) {
+      if (identical(p_success, 0)) {
+        stop("Explicit human mobility does not support nonzero `p_captured`.")
+      }
+      stop("Explicit human mobility does not support active border test-and-treat capture.")
+    }
+  }
+}
+
+validate_explicit_human_mobility_metapop <- function(
+  parameters,
+  export_mixing,
+  import_mixing,
+  p_captured,
+  p_success
+) {
+  n_nodes <- length(parameters)
+  human_mobility_validate_parameters(parameters, n_nodes)
+  if (!human_mobility_enabled_any(parameters)) {
+    return(invisible(NULL))
+  }
+
+  if (n_nodes < 2L || !all(vapply(parameters, native_mosquito_backend_enabled, logical(1)))) {
+    stop("Explicit human mobility requires the native metapop mosquito backend.")
+  }
+  human_mobility_validate_identity_mixing(export_mixing, n_nodes, "export_mixing")
+  human_mobility_validate_identity_mixing(import_mixing, n_nodes, "import_mixing")
+  human_mobility_validate_zero_capture(p_captured, n_nodes, p_success)
+
+  invisible(NULL)
+}
+
+native_validate_human_movement <- function(parameters) {
+  human_mobility_validate_parameters(parameters)
+  if (human_mobility_enabled_any(parameters) && length(parameters) < 2L) {
+    stop("Explicit human mobility requires the native metapop mosquito backend.")
   }
 }
 
