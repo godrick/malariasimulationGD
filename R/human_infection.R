@@ -22,9 +22,60 @@ simulate_infection <- function(
     timestep,
     renderer,
     infection_outcome,
-    transmission_multiplier = 1
+    transmission_multiplier = 1,
+    infection_exposure = NULL
 ) {
-  
+
+  if (!is.null(infection_exposure)) {
+    infection_exposure <- human_infection_validate_exposure(
+      infection_exposure,
+      parameters
+    )
+    has_infection_exposure <- any(infection_exposure > 0)
+
+    if (parameters$parasite == "falciparum") {
+      if (bitten_humans$size() > 0) {
+        # Stage 4 swaps infection hazards under mobility, but keeps blood
+        # immunity boosting tied to the existing sampled bite process.
+        boost_immunity(
+          variables$ib,
+          bitten_humans,
+          variables$last_boosted_ib,
+          timestep,
+          parameters$ub
+        )
+      }
+
+      if (has_infection_exposure) {
+        calculate_falciparum_infections(
+          variables,
+          bitten_humans,
+          parameters,
+          renderer,
+          timestep,
+          infection_outcome,
+          transmission_multiplier,
+          infection_exposure
+        )
+      }
+    } else if (parameters$parasite == "vivax") {
+      if (bitten_humans$size() > 0 || has_infection_exposure) {
+        calculate_vivax_infections(
+          variables,
+          bitten_humans,
+          n_bites_per_person,
+          parameters,
+          renderer,
+          timestep,
+          infection_outcome,
+          transmission_multiplier,
+          infection_exposure
+        )
+      }
+    }
+    return(invisible(NULL))
+  }
+
   if (bitten_humans$size() > 0) {
     if(parameters$parasite == "falciparum"){
       
@@ -65,6 +116,40 @@ simulate_infection <- function(
   
 }
 
+human_infection_validate_exposure <- function(infection_exposure, parameters) {
+  infection_exposure <- as.numeric(infection_exposure)
+  if (length(infection_exposure) != parameters$human_population ||
+      anyNA(infection_exposure) ||
+      any(!is.finite(infection_exposure)) ||
+      any(infection_exposure < 0)) {
+    stop("`infection_exposure` must be a nonnegative finite numeric vector matching the human population.")
+  }
+  infection_exposure
+}
+
+human_infection_exposure_target <- function(infection_exposure) {
+  target <- individual::Bitset$new(length(infection_exposure))
+  exposed <- which(infection_exposure > 0)
+  if (length(exposed) > 0L) {
+    target$insert(exposed)
+  }
+  target
+}
+
+human_infection_transmission_multiplier <- function(transmission_multiplier, source_vector, parameters) {
+  transmission_multiplier <- as.numeric(transmission_multiplier)
+  if (length(transmission_multiplier) == 1L) {
+    return(rep(transmission_multiplier, length(source_vector)))
+  }
+  if (length(transmission_multiplier) == parameters$human_population) {
+    return(transmission_multiplier[source_vector])
+  }
+  if (length(transmission_multiplier) == length(source_vector)) {
+    return(transmission_multiplier)
+  }
+  stop("`transmission_multiplier` must be scalar, population length, or match the infection target size.")
+}
+
 #' @title Calculate overall falciparum infections for bitten humans
 #' @description Infection rates are stored in the infection outcome competing hazards object
 #' @param variables a list of all of the model variables
@@ -80,10 +165,18 @@ calculate_falciparum_infections <- function(
     renderer,
     timestep,
     infection_outcome,
-    transmission_multiplier = 1
+    transmission_multiplier = 1,
+    infection_exposure = NULL
 ) {
-  
-  source_humans <- variables$state$get_index_of(c('S','A','U'))$and(bitten_humans)
+
+  if (is.null(infection_exposure)) {
+    source_humans <- variables$state$get_index_of(c('S','A','U'))$and(bitten_humans)
+  } else {
+    infection_exposure <- human_infection_validate_exposure(infection_exposure, parameters)
+    source_humans <- variables$state$get_index_of(c('S','A','U'))$and(
+      human_infection_exposure_target(infection_exposure)
+    )
+  }
   
   if(source_humans$size() > 0){
     
@@ -106,9 +199,21 @@ calculate_falciparum_infections <- function(
     
     ## p.f models blood immunity
     prob <- blood_immunity(variables$ib$get_values(source_humans), parameters)
+    if (!is.null(infection_exposure)) {
+      transmission_multiplier <- human_infection_transmission_multiplier(
+        transmission_multiplier,
+        source_vector,
+        parameters
+      )
+    }
     prob <- pmin(prob * transmission_multiplier, 1)
     prob <- prob * (1 - prophylaxis) * (1 - vaccine_efficacy)
-    infection_rates <- prob_to_rate(prob)
+    if (is.null(infection_exposure)) {
+      infection_rates <- prob_to_rate(prob)
+    } else {
+      infection_rates <- infection_exposure[source_vector] * prob
+      prob <- rate_to_prob(infection_rates)
+    }
     
     ## probability of incidence must be rendered at each timestep
     incidence_probability_renderer(
@@ -146,12 +251,19 @@ calculate_vivax_infections <- function(
     renderer,
     timestep,
     infection_outcome,
-    transmission_multiplier = 1
+    transmission_multiplier = 1,
+    infection_exposure = NULL
 ) {
   
   ## source_humans must include individuals with hypnozoites which may be impacted by prophylaxis/vaccination
   hypnozoites_humans <- variables$hypnozoites$get_index_of(set = 0)$not(T)
-  source_humans <- bitten_humans$copy()$or(hypnozoites_humans)
+  exposed_humans <- if (is.null(infection_exposure)) {
+    bitten_humans
+  } else {
+    infection_exposure <- human_infection_validate_exposure(infection_exposure, parameters)
+    human_infection_exposure_target(infection_exposure)
+  }
+  source_humans <- exposed_humans$copy()$or(hypnozoites_humans)
   
   if(source_humans$size() > 0){
     
@@ -173,12 +285,25 @@ calculate_vivax_infections <- function(
       timestep)
     
     ## p.v does not model blood immunity but must take into account multiple bites per person
-    b_eff <- pmin(parameters$b * transmission_multiplier, 1)
-    b <- 1 - (1 - b_eff)^n_bites_per_person[bitten_humans$to_vector()]
-    
     ## get infection rates for all bitten or with hypnozoites
     infection_rates <- rep(0, length = source_humans$size())
-    infection_rates[bitset_index(source_humans, bitten_humans)] <- prob_to_rate(b)
+    if (exposed_humans$size() > 0) {
+      exposed_vector <- exposed_humans$to_vector()
+      exposed_source_index <- bitset_index(source_humans, exposed_humans)
+      if (is.null(infection_exposure)) {
+        b_eff <- pmin(parameters$b * transmission_multiplier, 1)
+        b <- 1 - (1 - b_eff)^n_bites_per_person[bitten_humans$to_vector()]
+        infection_rates[exposed_source_index] <- prob_to_rate(b)
+      } else {
+        exposure_multiplier <- human_infection_transmission_multiplier(
+          transmission_multiplier,
+          exposed_vector,
+          parameters
+        )
+        b_eff <- pmin(parameters$b * exposure_multiplier, 1)
+        infection_rates[exposed_source_index] <- infection_exposure[exposed_vector] * b_eff
+      }
+    }
     
     # Add relapse rates for individuals with hypnozoites
     relative_rates <- NULL
