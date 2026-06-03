@@ -7,8 +7,15 @@
 #' @param events the model events to reset
 #' @param renderer the model renderer
 #' @param parameters model parameters
+#' @param human_exposure_lag_context optional per-human exposure lag context
 #' @noRd
-create_mortality_process <- function(variables, events, renderer, parameters) {
+create_mortality_process <- function(
+    variables,
+    events,
+    renderer,
+    parameters,
+    human_exposure_lag_context = NULL
+) {
   function(timestep) {
 
     pop <- get_human_population(parameters, timestep)
@@ -27,7 +34,15 @@ create_mortality_process <- function(variables, events, renderer, parameters) {
       died <- individual::Bitset$new(pop)$insert(bernoulli_multi_p(deathrates))
       renderer$render('natural_deaths', died$size(), timestep)
     }
-    reset_target(variables, events, died, 'S', parameters, timestep)
+    reset_target(
+      variables,
+      events,
+      died,
+      'S',
+      parameters,
+      timestep,
+      human_exposure_lag_context = human_exposure_lag_context
+    )
     sample_maternal_immunity(variables, died, timestep, parameters)
   }
 }
@@ -80,7 +95,15 @@ sample_maternal_immunity <- function(variables, target, timestep, parameters) {
   }
 }
 
-reset_target <- function(variables, events, target, state, parameters, timestep) {
+reset_target <- function(
+    variables,
+    events,
+    target,
+    state,
+    parameters,
+    timestep,
+    human_exposure_lag_context = NULL
+) {
   if (target$size() > 0) {
     # clear events
     to_clear <- c(
@@ -137,6 +160,12 @@ reset_target <- function(variables, events, target, state, parameters, timestep)
       variables$travel_remaining_nights$queue_update(0L, target)
       variables$is_travelling$queue_update(0L, target)
     }
+
+    human_exposure_lag_clear(
+      human_exposure_lag_context,
+      parameters$human_mobility_node_index,
+      target
+    )
     
     # zeta, zeta group, human slot contact multiplier, and vector controls
     # survive rebirth.
