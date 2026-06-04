@@ -312,6 +312,8 @@ test_that("non-identity mobility shifts exposure and FOIM signals to destination
   variables <- lapply(parameters, create_variables)
   variables[[1L]]$infectivity <- individual::DoubleVariable$new(c(1, 1))
   variables[[2L]]$infectivity <- individual::DoubleVariable$new(c(0, 0))
+  variables[[1L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[1L]]$human_population))
+  variables[[2L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[2L]]$human_population))
   variables[[1L]]$zeta <- individual::DoubleVariable$new(c(1, 1))
   variables[[2L]]$zeta <- individual::DoubleVariable$new(c(1, 1))
 
@@ -321,21 +323,23 @@ test_that("non-identity mobility shifts exposure and FOIM signals to destination
   expect_equal(variables[[1L]]$current_node$get_values(), c(2L, 2L))
   expect_equal(colSums(mobility_context$active_od), c(0L, 4L))
 
-  exposure_context <- new.env(parent = emptyenv())
-  exposure_context$n_nodes <- 2L
-  exposure_context$variables <- variables
-  exposure_context$weighted_active <- FALSE
-  exposure_context$reported_timestep <- NA_real_
-  exposure_context$reported <- rep(FALSE, 2L)
-  exposure_context$node_exposure <- rep(NA_real_, 2L)
-  exposure_context$node_weighted_exposure <- NULL
-  exposure_context$buffers <- list(
-    HumanExposureLagBuffer$new(max_lag = 2, default_exposure = c(0, 0)),
-    HumanExposureLagBuffer$new(max_lag = 2, default_exposure = c(0, 0))
+  lagged_eir <- lapply(c(0, 0), function(default) list(LaggedValue$new(3, default)))
+  exposure_context <- create_human_exposure_lag_context(
+    parameters = parameters,
+    variables = variables,
+    solvers = list(NULL, NULL),
+    lagged_eir = lagged_eir,
+    lagged_transmission_eir = lagged_eir
   )
   human_exposure_lag_record_node(exposure_context, node_index = 1L, timestep = 1L, exposure = 10)
   human_exposure_lag_record_node(exposure_context, node_index = 2L, timestep = 1L, exposure = 100)
-  expect_equal(exposure_context$buffers[[1L]]$get(1L), c(100, 100))
+  expect_equal(exposure_context$buffers[[1L]]$get(1L), c(25, 25))
+  expect_equal(exposure_context$buffers[[2L]]$get(1L), c(25, 25))
+  expect_equal(
+    sum(exposure_context$buffers[[1L]]$get(1L)) +
+      sum(exposure_context$buffers[[2L]]$get(1L)),
+    100
+  )
 
   infectivity_context <- create_human_infectivity_lag_context(parameters, variables)
   human_infectivity_lag_record_node(infectivity_context, 1L, timestep = 1L)
