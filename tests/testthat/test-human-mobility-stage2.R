@@ -169,6 +169,7 @@ test_that("mobility process is inserted after mosquito releases and before bitin
   variables <- lapply(parameters, create_variables)
   renderers <- lapply(seq_along(parameters), function(.) individual::Render$new(1))
   context <- create_human_mobility_context(parameters, variables, timesteps = 1)
+  infectivity_context <- create_human_infectivity_lag_context(parameters, variables)
   processes <- create_processes(
     renderer = renderers[[1]],
     variables = variables[[1]],
@@ -179,12 +180,14 @@ test_that("mobility process is inserted after mosquito releases and before bitin
     lagged_eir = list(),
     lagged_infectivity = list(),
     lagged_transmission_eir = list(),
-    human_mobility_context = context
+    human_mobility_context = context,
+    human_infectivity_lag_context = infectivity_context
   )
 
   process_names <- names(processes)
   expect_lt(match("mosquito_release_process", process_names), match("human_mobility_process", process_names))
-  expect_lt(match("human_mobility_process", process_names), match("biting_process", process_names))
+  expect_lt(match("human_mobility_process", process_names), match("human_infectivity_lag_process", process_names))
+  expect_lt(match("human_infectivity_lag_process", process_names), match("biting_process", process_names))
 
   disabled <- get_parameters(list(
     human_population = 4,
@@ -203,6 +206,7 @@ test_that("mobility process is inserted after mosquito releases and before bitin
     lagged_transmission_eir = list()
   )
   expect_false("human_mobility_process" %in% names(disabled_processes))
+  expect_false("human_infectivity_lag_process" %in% names(disabled_processes))
 })
 
 test_that("fixed L=1 is away for current timestep and home next timestep", {
