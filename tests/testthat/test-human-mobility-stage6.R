@@ -151,6 +151,13 @@ test_that("native biting handoff does not step solvers and passes mobility-aware
   infectivity_context <- create_human_infectivity_lag_context(parameters, variables)
   human_infectivity_lag_record_node(infectivity_context, 1L, timestep = 1L)
   human_infectivity_lag_record_node(infectivity_context, 2L, timestep = 1L)
+  exposure_context <- create_human_exposure_lag_context(
+    parameters,
+    variables,
+    solvers = list(NULL, NULL),
+    lagged_eir = lapply(seq_along(parameters), function(i) list(LaggedValue$new(3, 0))),
+    lagged_transmission_eir = lapply(seq_along(parameters), function(i) list(LaggedValue$new(3, 0)))
+  )
 
   step_mock <- mockery::mock()
   solver <- human_mobility_stage6_solver(step_mock, infectious = 0)
@@ -172,7 +179,7 @@ test_that("native biting handoff does not step solvers and passes mobility-aware
     mixing_fn = NULL,
     mixing_index = 2L,
     lagged_transmission_eir = list(LaggedValue$new(3, 0)),
-    human_exposure_lag_context = NULL,
+    human_exposure_lag_context = exposure_context,
     human_infectivity_lag_context = infectivity_context
   )
 

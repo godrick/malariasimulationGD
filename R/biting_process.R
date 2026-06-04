@@ -57,29 +57,6 @@ create_biting_process <- function(
       human_infectivity_lag_context
     )
 
-    if (human_mobility_enabled(parameters)) {
-      infection_input <- human_exposure_lag_get_infection_input(
-        human_exposure_lag_context,
-        mixing_index,
-        timestep,
-        parameters
-      )
-      simulate_infection(
-        variables,
-        events,
-        bitten$bitten_humans,
-        bitten$n_bites_per_person,
-        age,
-        parameters,
-        timestep,
-        renderer,
-        infection_outcome,
-        infection_input$transmission_multiplier,
-        infection_exposure = infection_input$infection_exposure
-      )
-      return(invisible(NULL))
-    }
-
     simulate_infection(
       variables,
       events,
@@ -187,6 +164,16 @@ simulate_bites <- function(
   transmission_signal <- 0
   current_exposure_by_species <- numeric(length(parameters$species))
   current_weighted_exposure_by_species <- numeric(length(parameters$species))
+  mobility_bite_input <- if (human_mobility_enabled(parameters)) {
+    human_exposure_lag_get_infection_input(
+      human_exposure_lag_context,
+      mixing_index,
+      timestep,
+      parameters
+    )
+  } else {
+    NULL
+  }
 
   for (s_i in seq_along(parameters$species)) {
     species_name <- parameters$species[[s_i]]
@@ -311,42 +298,30 @@ simulate_bites <- function(
     renderer$render(paste0('EIR_', species_name), species_eir, timestep)
     EIR <- EIR + species_eir
     transmission_signal <- transmission_signal + species_transmission_eir
-    if(parameters$parasite == "falciparum"){
-      # p.f model factors eir by psi
-      expected_bites <- species_eir * mean(psi)
-    } else if (parameters$parasite == "vivax"){
-      # p.v model standardises biting rate het to eir
-      expected_bites <- species_eir
+    bite_sampling_weights <- lambda
+    expected_bites <- legacy_expected_infectious_bites(species_eir, psi, parameters)
+    if (human_mobility_enabled(parameters)) {
+      bite_sampling_weights <- mobility_bite_input$bite_rates_by_species[s_i, ]
+      expected_bites <- sum(bite_sampling_weights)
     }
-
-    if (!is.finite(expected_bites)) {
-      stop(
-        sprintf(
-          paste(
-            "Non-finite expected_bites in simulate_bites",
-            "(timestep=%s, species=%s, species_eir=%s, mean_psi=%s)."
-          ),
-          as.character(timestep),
-          species_name,
-          format(species_eir, digits = 16),
-          format(mean(psi), digits = 16)
-        ),
-        call. = FALSE
-      )
-    }
-
-    if (expected_bites > 0) {
-      n_bites <- rpois(1, expected_bites)
-      if (n_bites > 0) {
-        bitten <- fast_weighted_sample(n_bites, lambda)
-        bitten_humans$insert(bitten)
-        renderer$render('n_bitten', bitten_humans$size(), timestep)
-        if(parameters$parasite == "vivax"){
-          # p.v must pass through the number of bites per person
-          n_bites_per_person <- tabulate(bitten, nbins = length(lambda))
+    legacy_sample_infectious_bites(
+      expected_bites = expected_bites,
+      bite_sampling_weights = bite_sampling_weights,
+      bitten_humans = bitten_humans,
+      parameters = parameters,
+      renderer = renderer,
+      timestep = timestep,
+      species_name = species_name,
+      mean_psi = mean(psi),
+      rpois_fn = rpois,
+      sample_fn = fast_weighted_sample,
+      n_bites_per_person_ref = function(value) {
+        if (!missing(value)) {
+          n_bites_per_person <<- value
         }
+        n_bites_per_person
       }
-    }
+    )
 
     lagged_infectivity$save(sum(human_infectivity * .pi), timestep)
 
@@ -507,7 +482,13 @@ simulate_bites <- function(
     current_weighted_exposure_by_species
   )
 
-  transmission_multiplier <- if (EIR > 0) transmission_signal / EIR else 1
+  transmission_multiplier <- if (human_mobility_enabled(parameters)) {
+    mobility_bite_input$transmission_multiplier
+  } else if (EIR > 0) {
+    transmission_signal / EIR
+  } else {
+    1
+  }
 
   list(
     bitten_humans = bitten_humans,
@@ -535,6 +516,63 @@ calculate_transmission_eir <- function(species, solvers, variables, parameters, 
 
 effective_biting_rates <- function(a, .pi, p_bitten) {
   a * .pi * p_bitten$prob_bitten / sum(.pi * p_bitten$prob_bitten_survives)
+}
+
+legacy_expected_infectious_bites <- function(species_eir, psi, parameters) {
+  if (parameters$parasite == "falciparum") {
+    # p.f model factors eir by psi
+    return(species_eir * mean(psi))
+  }
+  if (parameters$parasite == "vivax") {
+    # p.v model standardises biting rate het to eir
+    return(species_eir)
+  }
+  stop("Unknown parasite type when calculating infectious bites.", call. = FALSE)
+}
+
+legacy_sample_infectious_bites <- function(
+    expected_bites,
+    bite_sampling_weights,
+    bitten_humans,
+    parameters,
+    renderer,
+    timestep,
+    species_name,
+    mean_psi,
+    rpois_fn,
+    sample_fn,
+    n_bites_per_person_ref
+) {
+  if (!is.finite(expected_bites)) {
+    stop(
+      sprintf(
+        paste(
+          "Non-finite expected_bites in simulate_bites",
+          "(timestep=%s, species=%s, species_eir=%s, mean_psi=%s)."
+        ),
+        as.character(timestep),
+        species_name,
+        format(expected_bites, digits = 16),
+        format(mean_psi, digits = 16)
+      ),
+      call. = FALSE
+    )
+  }
+
+  if (expected_bites > 0) {
+    n_bites <- rpois_fn(1, expected_bites)
+    if (n_bites > 0) {
+      bitten <- sample_fn(n_bites, bite_sampling_weights)
+      bitten_humans$insert(bitten)
+      renderer$render('n_bitten', bitten_humans$size(), timestep)
+      if (parameters$parasite == "vivax") {
+        # p.v must pass through the number of bites per person
+        n_bites_per_person_ref(tabulate(bitten, nbins = length(bite_sampling_weights)))
+      }
+    }
+  }
+
+  invisible(NULL)
 }
 
 legacy_contact_multiplier_for_human_slots <- function(parameters) {

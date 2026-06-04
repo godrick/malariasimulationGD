@@ -75,7 +75,7 @@ test_that("human exposure lag buffers use per-human defaults and interpolate", {
   )
 })
 
-test_that("diag human_move_probs records allocated home-node unlagged exposure for residents", {
+test_that("diag human_move_probs records allocated home-node bite-sampling rates for residents", {
   parameters <- human_mobility_stage3_params()
   variables <- lapply(parameters, create_variables)
   variables[[1L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[1L]]$human_population))
@@ -101,7 +101,7 @@ test_that("diag human_move_probs records allocated home-node unlagged exposure f
   expect_equal(context$buffers[[2]]$get(1), rep(7 / 3, 3))
 })
 
-test_that("recording allocates destination exposure across explicit travellers and residents", {
+test_that("recording allocates destination bite-sampling rates across explicit travellers and residents", {
   parameters <- human_mobility_stage3_params()
   variables <- lapply(parameters, create_variables)
   variables[[1L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[1L]]$human_population))
@@ -128,7 +128,7 @@ test_that("recording allocates destination exposure across explicit travellers a
   expect_equal(context$buffers[[2]]$get(1), rep(7 / 4, 3))
 })
 
-test_that("reset_target clears replaced slots to home-node exposure defaults", {
+test_that("reset_target clears replaced slots to home-node bite-sampling defaults", {
   parameters <- human_mobility_stage3_params(population_1 = 3L)
   variables <- lapply(parameters, create_variables)
   variables[[1L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[1L]]$human_population))
@@ -161,7 +161,7 @@ test_that("reset_target clears replaced slots to home-node exposure defaults", {
   expect_equal(context$buffers[[1]]$get(2), c(6, 11 / 3, 8))
 })
 
-test_that("weighted exposure is optional and scalar per human when active", {
+test_that("weighted bite-sampling exposure is optional and scalar per human when active", {
   inactive_parameters <- human_mobility_stage3_params()
   inactive_variables <- lapply(inactive_parameters, create_variables)
   lagged_eir <- human_mobility_stage3_lagged(c(11, 22))
@@ -201,7 +201,7 @@ test_that("weighted exposure is optional and scalar per human when active", {
   expect_equal(active_context$buffers[[1]]$get(1, weighted = TRUE), rep(15 / 2, 2))
 })
 
-test_that("human exposure allocation uses biting weights and preserves destination totals", {
+test_that("human exposure allocation uses biting weights and preserves destination bite totals", {
   parameters <- human_mobility_stage3_params(population_1 = 2L, population_2 = 1L)
   variables <- lapply(parameters, create_variables)
   variables[[1L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[1L]]$human_population))
@@ -229,7 +229,37 @@ test_that("human exposure allocation uses biting weights and preserves destinati
   expect_lt(max(node_1_exposure), 8)
 })
 
-test_that("weighted human exposure uses the same biting allocation shares", {
+test_that("falciparum exposure defaults and records use legacy expected bite-count scale", {
+  parameters <- human_mobility_stage3_params(population_1 = 2L, population_2 = 1L)
+  variables <- lapply(parameters, create_variables)
+  variables[[1L]]$birth <- individual::DoubleVariable$new(c(0, -20 * 365))
+  variables[[2L]]$birth <- individual::DoubleVariable$new(-20 * 365)
+  variables[[1L]]$zeta <- individual::DoubleVariable$new(c(1, 1))
+  variables[[2L]]$zeta <- individual::DoubleVariable$new(1)
+
+  context <- create_human_exposure_lag_context(
+    parameters = parameters,
+    variables = variables,
+    solvers = list(NULL, NULL),
+    lagged_eir = human_mobility_stage3_lagged(c(4, 0)),
+    lagged_transmission_eir = human_mobility_stage3_lagged(c(4, 0))
+  )
+
+  psi <- unique_biting_rate(get_age(variables[[1L]]$birth$get_values(), 1L), parameters[[1L]])
+  expected_bites <- legacy_expected_infectious_bites(8, psi, parameters[[1L]])
+
+  human_exposure_lag_record_node(context, node_index = 1L, timestep = 1L, exposure = 8)
+  human_exposure_lag_record_node(context, node_index = 2L, timestep = 1L, exposure = 0)
+
+  expect_equal(sum(context$buffers[[1L]]$get(1L)), expected_bites, tolerance = 1e-12)
+  expect_equal(
+    sum(context$buffers[[1L]]$get(1L, by_species = TRUE)),
+    expected_bites,
+    tolerance = 1e-12
+  )
+})
+
+test_that("weighted human bite-sampling exposure uses the same biting allocation shares", {
   parameters <- human_mobility_stage3_params(population_1 = 2L, population_2 = 1L)
   parameters <- lapply(parameters, function(p) {
     p$vector_infectivity_g_by_species <- list(gamb = 2)

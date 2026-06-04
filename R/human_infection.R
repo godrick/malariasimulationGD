@@ -204,7 +204,7 @@ calculate_falciparum_infections <- function(
     
     ## p.f models blood immunity
     prob <- blood_immunity(variables$ib$get_values(source_humans), parameters)
-    if (!is.null(infection_exposure)) {
+    if (!is.null(infection_exposure) || length(transmission_multiplier) > 1L) {
       transmission_multiplier <- human_infection_transmission_multiplier(
         transmission_multiplier,
         source_vector,
@@ -296,7 +296,12 @@ calculate_vivax_infections <- function(
       exposed_vector <- exposed_humans$to_vector()
       exposed_source_index <- bitset_index(source_humans, exposed_humans)
       if (is.null(infection_exposure)) {
-        b_eff <- pmin(parameters$b * transmission_multiplier, 1)
+        bite_multiplier <- human_infection_transmission_multiplier(
+          transmission_multiplier,
+          bitten_humans$to_vector(),
+          parameters
+        )
+        b_eff <- pmin(parameters$b * bite_multiplier, 1)
         b <- 1 - (1 - b_eff)^n_bites_per_person[bitten_humans$to_vector()]
         infection_rates[exposed_source_index] <- prob_to_rate(b)
       } else {

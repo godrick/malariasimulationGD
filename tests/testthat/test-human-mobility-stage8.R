@@ -224,7 +224,7 @@ test_that("per-human lag buffers remain bounded by configured lag history", {
   expect_equal(infectivity_state$timesteps, 7:10)
 })
 
-test_that("identity mobility preserves first-timestep biting RNG and avoids infection inflation", {
+test_that("identity mobility preserves first-timestep biting RNG and infection scale", {
   no_mobility <- human_mobility_stage8_identity_equilibrium_run(mobility = FALSE)
   identity_mobility <- human_mobility_stage8_identity_equilibrium_run(mobility = TRUE)
 
@@ -237,13 +237,13 @@ test_that("identity mobility preserves first-timestep biting RNG and avoids infe
 
   no_mobility_infections <- sum(vapply(no_mobility, function(output) sum(output$n_infections), numeric(1)))
   identity_mobility_infections <- sum(vapply(identity_mobility, function(output) sum(output$n_infections), numeric(1)))
-  expect_lte(identity_mobility_infections, max(1, 2 * no_mobility_infections))
+  expect_equal(identity_mobility_infections, no_mobility_infections)
 
   detection_column <- "p_detect_lm_730_3650"
   if (all(vapply(no_mobility, function(output) detection_column %in% names(output), logical(1)))) {
     no_mobility_detection <- sum(vapply(no_mobility, function(output) tail(output[[detection_column]], 1), numeric(1)))
     identity_mobility_detection <- sum(vapply(identity_mobility, function(output) tail(output[[detection_column]], 1), numeric(1)))
-    expect_lte(identity_mobility_detection, max(1, 2 * no_mobility_detection))
+    expect_equal(identity_mobility_detection, no_mobility_detection, tolerance = 1e-12)
   }
 })
 
