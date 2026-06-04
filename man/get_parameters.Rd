@@ -401,22 +401,49 @@ vivax); default = NULL
 origin rate vector for the native metapop backend; default = NULL
 \item mosquito_move_probs / mosquito_move_rates - legacy aliases for the same
 mosquito movement inputs; default = NULL
-\item human_mobility_enabled - boolean switch for explicit R-layer overnight
-human mobility in the native metapopulation backend; default = FALSE
-\item human_mobility_mode - human mobility implementation mode. Stage 1 supports
-only \code{"explicit"}; default = \code{"explicit"}
+\item human_mobility_enabled - boolean switch for explicit R-layer temporary
+overnight human mobility in native metapopulation runs; default = FALSE
+\item human_mobility_mode - human mobility implementation mode. The supported
+mode is \code{"explicit"}; default = \code{"explicit"}
 \item human_move_probs - optional shared row-stochastic matrix where element
-\code{[i, j]} is the probability that a resident of node \code{i} sleeps in node
-\code{j}; default = NULL
+\verb{[i, j]} is the probability that a resident of node \code{i} sleeps in node \code{j}
+tonight, conditional on being available at home for trip sampling. Diagonal
+entries are stay-home probabilities and off-diagonal row sums are travel
+probabilities. Rows must sum to 1. The matrix may be supplied once across a
+metapopulation parameter list; if multiple non-NULL matrices are supplied,
+they must match; default = NULL
 \item human_move_rates - unsupported physical native-backend human movement rates;
 rejected when supplied; default = NULL
-\item human_trip_duration_type - trip duration family for future explicit
-mobility dynamics. Stage 1 validates \code{"fixed"} and \code{"geometric"} only;
-default = \code{"fixed"}
-\item human_trip_duration_mean - mean trip duration in nights. Must be a positive
-integer for fixed trips and numeric >= 1 for geometric trips; default = 1
-\item human_mobility_store_diagnostics - boolean switch for future optional
-mobility diagnostics; default = FALSE
+\item human_trip_duration_type - trip duration family for explicit mobility.
+Supported values are \code{"fixed"} and \code{"geometric"}; default = \code{"fixed"}
+\item human_trip_duration_mean - mean trip duration in nights. Trips last at
+least one night. Must be a positive integer for fixed trips and numeric >= 1
+for geometric trips; default = 1
+\item human_mobility_store_diagnostics - boolean switch for optional
+origin-destination diagnostics on metapopulation output lists; default = FALSE
+}
+
+Explicit human mobility is temporary overnight mobility, not permanent
+migration. Humans remain stored in their home-node records. Human infection
+uses delayed per-human exposure from the node where the human slept, and
+mosquito FOIM uses current sleeping location with lagged per-human
+infectivity. Returning travellers spend one timestep at home before possible
+resampling. Native C++ mosquito models receive scalar node-level FOIM only;
+no per-human movement state is passed to C++.
+
+Human-carried state remains attached to the home-node human record under
+explicit mobility, including \code{net_time}, \code{drug}, \code{drug_time}, PEV state, TBV
+status, immunity, age, \code{zeta}, \code{human_slot_contact_multiplier}, infection
+state, and infectivity. Bednets are represented through per-human \code{net_time},
+so they are human-slot attributes. Under explicit mobility v1, \code{spray_time}
+remains attached to the human record. Visitor-specific household IRS exposure
+is not explicitly represented. Falciparum blood-immunity boosting remains
+tied to sampled \code{bitten_humans}.
+
+Explicit human mobility currently requires the native metapopulation mosquito
+backend, identity import/export mixing, zero border capture, and \code{de > 0}.
+\code{human_move_rates} and non-\code{"explicit"} mobility modes are unsupported.
+\itemize{
 \item releases - optional mosquito genotype release configuration list (see
 \code{\link{set_releases}}); default = NULL
 \item debug_genotypes - print compact debug tracing for mosquito genotype release /
