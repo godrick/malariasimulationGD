@@ -1473,11 +1473,15 @@ native_mosquito_model_update <- function(model, timestep, mu, foim, f) {
   if (!is.null(pending$timestep) && pending$timestep != absolute_timestep) {
     stop("Native mosquito backend received mixed timesteps before stepping.")
   }
+  foim <- as.numeric(foim)
+  if (length(foim) != 1L || anyNA(foim) || !is.finite(foim) || foim < 0) {
+    stop("Native mosquito backend FOIM must be a single nonnegative finite value.", call. = FALSE)
+  }
 
   pending$timestep <- absolute_timestep
   pending$beta[[model$node]] <- as.numeric(eggs_laid(model$species_beta, mu, f))
   pending$mu[[model$node]] <- as.numeric(mu)
-  pending$foim[[model$node]] <- as.numeric(foim)
+  pending$foim[[model$node]] <- foim[[1L]]
   pending$ready[[model$node]] <- TRUE
   shared$pending_inputs <- pending
   invisible(NULL)
