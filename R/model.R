@@ -21,14 +21,21 @@
 #'  * n_treated: number of humans treated for clinical or severe malaria this timestep
 #'  * n_infections: number of humans who get an asymptomatic, clinical or severe malaria this timestep
 #'  * natural_deaths: number of humans who die from aging
-#'  * humans_present: number of humans physically present in a node when
-#' explicit human mobility is enabled
+#'  * humans_present: number of humans physically present in a node after the
+#' explicit overnight mobility update
 #'  * visitors_present: number of present humans whose home node differs from
-#' the rendered node when explicit human mobility is enabled
+#' the rendered node after the explicit overnight mobility update
 #'  * residents_away: number of residents physically away from their home node
-#' when explicit human mobility is enabled
+#' after the explicit overnight mobility update
 #'  * trips_started: number of residents who started an off-home trip this
-#' timestep when explicit human mobility is enabled
+#' timestep under explicit overnight mobility
+#'
+#' When explicit human mobility is enabled in `run_metapop_simulation()`, these
+#' four mobility columns are the only default mobility outputs. If
+#' `human_mobility_store_diagnostics = TRUE`, the returned metapopulation output
+#' list also carries optional attributes `OD_started_trips`,
+#' `OD_active_overnight_stays`, and `mean_remaining_trip_duration`.
+#'
 #'  * S_count: number of humans who are Susceptible
 #'  * A_count: number of humans who are Asymptomatic
 #'  * D_count: number of humans who have the clinical malaria
@@ -397,7 +404,10 @@ run_resumable_simulation <- function(
 #' @param render_output if FALSE, skip output rendering/data-frame materialization
 #'   and run in a state-only mode suitable for checkpoint burn-in
 #' @param return_summary if TRUE, return a lightweight final-state summary
-#' @return a list of dataframe of model outputs as in run_simulation
+#' @return a list of dataframe of model outputs as in `run_simulation`. When
+#' explicit human mobility diagnostics are enabled, the output list also has
+#' attributes `OD_started_trips`, `OD_active_overnight_stays`, and
+#' `mean_remaining_trip_duration`.
 #' @export
 run_metapop_simulation <- function(
   timesteps,
