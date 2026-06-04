@@ -19,6 +19,11 @@ create_human_mobility_context <- function(parameters, variables, timesteps, rend
   context$variables <- variables
   context$n_nodes <- n_nodes
   context$move_probs <- parameters[[1L]]$human_move_probs
+  context$can_start_trips <- vapply(
+    seq_len(n_nodes),
+    function(i) any(context$move_probs[i, -i] > 0),
+    logical(1)
+  )
   context$last_updated_timestep <- NA_integer_
   context$active_od <- matrix(0L, nrow = n_nodes, ncol = n_nodes)
   context$started_od <- matrix(0L, nrow = n_nodes, ncol = n_nodes)
@@ -80,7 +85,7 @@ human_mobility_update_node <- function(context, node_index) {
       is_travelling == 0L &
       remaining == 0L
   )
-  if (length(eligible) > 0L) {
+  if (length(eligible) > 0L && isTRUE(context$can_start_trips[[node_index]])) {
     draw <- sample.int(
       n_nodes,
       size = length(eligible),
