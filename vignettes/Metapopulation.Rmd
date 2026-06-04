@@ -118,6 +118,88 @@ output$mix = factor(output$mix, levels = c('isolated', 'semi-mixed', 'perfectly-
 output <- aggregate(prev2to10 ~ mix + EIR + year, data = output, FUN = mean)
 ```
 
+### Explicit overnight human mobility
+
+Explicit human mobility can be used in native metapopulation simulations to
+model temporary overnight travel between nodes. This is not permanent migration:
+humans remain stored in their home-node records, and `current_node` records
+where each human sleeps for exposure and mosquito infection calculations.
+
+The mobility matrix is row-stochastic. Element `human_move_probs[i, j]` is the
+probability that a resident of node `i` sleeps in node `j` tonight, conditional
+on that resident being at home and available for trip sampling. Diagonal entries
+are stay-home probabilities, and off-diagonal entries are travel probabilities.
+Rows must sum to 1.
+
+```{r, eval = FALSE}
+human_move_probs <- matrix(
+  c(
+    0.80, 0.20,
+    0.10, 0.90
+  ),
+  nrow = 2,
+  byrow = TRUE
+)
+
+paramslist <- lapply(seq_len(2), function(node) {
+  params <- get_parameters(list(
+    human_population = 1000,
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = FALSE,
+    human_mobility_enabled = TRUE,
+    human_trip_duration_type = "fixed",
+    human_trip_duration_mean = 1,
+    human_mobility_store_diagnostics = TRUE
+  ))
+  params <- set_equilibrium(params, init_EIR = EIR_vector[node])
+  params
+})
+
+# The shared matrix can be supplied once. If supplied on multiple nodes,
+# all non-NULL matrices must be identical.
+paramslist[[1]]$human_move_probs <- human_move_probs
+
+output <- run_metapop_simulation(
+  timesteps = sim_length,
+  parameters = paramslist,
+  correlations = NULL,
+  mixing_tt = 1,
+  export_mixing = list(diag(2)),
+  import_mixing = list(diag(2)),
+  p_captured = list(matrix(0, nrow = 2, ncol = 2)),
+  p_captured_tt = 1,
+  p_success = 0
+)
+
+attr(output, "OD_started_trips")
+attr(output, "OD_active_overnight_stays")
+attr(output, "mean_remaining_trip_duration")
+```
+
+With `human_trip_duration_type = "fixed"` and
+`human_trip_duration_mean = 1`, off-home trips last one overnight exposure.
+Returning travellers spend one timestep at home before possible resampling.
+
+By default, the mobility outputs are `humans_present`, `visitors_present`,
+`residents_away`, and `trips_started`. Optional origin-destination diagnostics
+are stored only as output-list attributes when
+`human_mobility_store_diagnostics = TRUE`.
+
+Explicit mobility currently requires the native metapopulation mosquito backend,
+identity import/export mixing, zero border capture, and positive `de`.
+`human_move_rates` and non-`"explicit"` mobility modes are unsupported. Native
+C++ receives scalar node-level FOIM only; no per-human movement state is passed
+to the native backend.
+
+Human-carried state remains attached to the home-node human record, including
+bednet state (`net_time`), drugs and prophylaxis (`drug`, `drug_time`), PEV
+state, TBV status, immunity, age, `zeta`, `human_slot_contact_multiplier`,
+infection state, and infectivity. Bednets are represented through per-human
+`net_time`, so they are human-slot attributes. Under explicit mobility v1,
+`spray_time` remains attached to the human record. Visitor-specific household
+IRS exposure is not explicitly represented. Falciparum blood-immunity boosting
+remains tied to the sampled `bitten_humans` pathway.
+
 ### Visualisation
 
 Now let's visualize the results of mixing on PfPR2-10:
