@@ -61,7 +61,10 @@ and run in a state-only mode suitable for checkpoint burn-in}
 \item{return_summary}{if TRUE, return a lightweight final-state summary}
 }
 \value{
-a list of dataframe of model outputs as in run_simulation
+a list of dataframe of model outputs as in \code{run_simulation}. When
+explicit human mobility diagnostics are enabled, the output list also has
+attributes \code{OD_started_trips}, \code{OD_active_overnight_stays}, and
+\code{mean_remaining_trip_duration}.
 }
 \description{
 Run a metapopulation model
