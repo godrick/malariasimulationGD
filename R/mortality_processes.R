@@ -8,13 +8,15 @@
 #' @param renderer the model renderer
 #' @param parameters model parameters
 #' @param human_exposure_lag_context optional per-human exposure lag context
+#' @param human_infectivity_lag_context optional per-human infectivity lag context
 #' @noRd
 create_mortality_process <- function(
     variables,
     events,
     renderer,
     parameters,
-    human_exposure_lag_context = NULL
+    human_exposure_lag_context = NULL,
+    human_infectivity_lag_context = NULL
 ) {
   function(timestep) {
 
@@ -41,7 +43,8 @@ create_mortality_process <- function(
       'S',
       parameters,
       timestep,
-      human_exposure_lag_context = human_exposure_lag_context
+      human_exposure_lag_context = human_exposure_lag_context,
+      human_infectivity_lag_context = human_infectivity_lag_context
     )
     sample_maternal_immunity(variables, died, timestep, parameters)
   }
@@ -102,7 +105,8 @@ reset_target <- function(
     state,
     parameters,
     timestep,
-    human_exposure_lag_context = NULL
+    human_exposure_lag_context = NULL,
+    human_infectivity_lag_context = NULL
 ) {
   if (target$size() > 0) {
     # clear events
@@ -163,6 +167,12 @@ reset_target <- function(
 
     human_exposure_lag_clear(
       human_exposure_lag_context,
+      parameters$human_mobility_node_index,
+      target
+    )
+
+    human_infectivity_lag_clear(
+      human_infectivity_lag_context,
       parameters$human_mobility_node_index,
       target
     )
