@@ -344,9 +344,34 @@ regional_infections_total <- function(ts_df) {
   safe_col_sum(ts_df, "n_infections")
 }
 
+mean_daily_sum <- function(ts_df, col) {
+  if (!col %in% names(ts_df)) {
+    return(NA_real_)
+  }
+  
+  daily <- aggregate(
+    ts_df[[col]],
+    by = list(timestep = ts_df$timestep),
+    FUN = sum,
+    na.rm = TRUE
+  )
+  
+  mean(daily$x, na.rm = TRUE)
+}
+
+mobility_daily_means <- function(ts_df) {
+  data.frame(
+    mean_daily_humans_present   = mean_daily_sum(ts_df, "humans_present"),
+    mean_daily_visitors_present = mean_daily_sum(ts_df, "visitors_present"),
+    mean_daily_residents_away   = mean_daily_sum(ts_df, "residents_away"),
+    mean_daily_trips_started    = mean_daily_sum(ts_df, "trips_started")
+  )
+}
+
 summarise_arm <- function(arm, ts_df, carrier_info, elapsed) {
   carrier_df <- carrier_info$carrier_df
   first_H <- carrier_info$first_H_per_node
+  mobility_means <- mobility_daily_means(ts_df)
   
   first_H_day_overall <- if (any(!is.na(first_H))) {
     min(first_H, na.rm = TRUE)
@@ -380,10 +405,10 @@ summarise_arm <- function(arm, ts_df, carrier_info, elapsed) {
     peak_carrier_nonrelease = peak_carrier_nonrelease,
     regional_infections_total = regional_infections_total(ts_df),
     regional_pfpr_readout = regional_prevalence_at(ts_df, readout_day),
-    total_humans_present = safe_col_sum(ts_df, "humans_present"),
-    total_visitors_present = safe_col_sum(ts_df, "visitors_present"),
-    total_residents_away = safe_col_sum(ts_df, "residents_away"),
-    total_trips_started = safe_col_sum(ts_df, "trips_started"),
+    mean_daily_humans_present   = mobility_means$mean_daily_humans_present,
+    mean_daily_visitors_present = mobility_means$mean_daily_visitors_present,
+    mean_daily_residents_away   = mobility_means$mean_daily_residents_away,
+    mean_daily_trips_started    = mobility_means$mean_daily_trips_started,
     elapsed_seconds = round(elapsed, 1),
     stringsAsFactors = FALSE
   )
