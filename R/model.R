@@ -623,6 +623,10 @@ run_metapop_simulation <- function(
     lagged_eir = lagged_eir,
     lagged_transmission_eir = lagged_transmission_eir
   )
+  human_infectivity_lag_context <- create_human_infectivity_lag_context(
+    parameters = parameters,
+    variables = variables
+  )
   if (is.null(initial_state)) {
     if (!is.null(metapop_stationary_initialization_context$vector_state)) {
       stationary_human_initializer_restore_vector_state(
@@ -670,6 +674,11 @@ run_metapop_simulation <- function(
       initial_state$timesteps,
       initial_state$malariasimulationGD$human_exposure_lag
     )
+    human_infectivity_lag_restore_state(
+      human_infectivity_lag_context,
+      initial_state$timesteps,
+      initial_state$malariasimulationGD$human_infectivity_lag
+    )
   }
 
   mixing_fn <- time_cached(
@@ -707,7 +716,8 @@ run_metapop_simulation <- function(
         lagged_transmission_eir = lagged_transmission_eir[[i]],
         enable_rendering = render_output,
         human_mobility_context = human_mobility_context,
-        human_exposure_lag_context = human_exposure_lag_context
+        human_exposure_lag_context = human_exposure_lag_context,
+        human_infectivity_lag_context = human_infectivity_lag_context
       )
     }
   )
@@ -725,6 +735,10 @@ run_metapop_simulation <- function(
   human_exposure_lag_state <- human_exposure_lag_save_state(human_exposure_lag_context)
   if (!is.null(human_exposure_lag_state)) {
     malariasimulationGD_state$human_exposure_lag <- human_exposure_lag_state
+  }
+  human_infectivity_lag_state <- human_infectivity_lag_save_state(human_infectivity_lag_context)
+  if (!is.null(human_infectivity_lag_state)) {
+    malariasimulationGD_state$human_infectivity_lag <- human_infectivity_lag_state
   }
 
   final_state <- list(
