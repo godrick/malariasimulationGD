@@ -214,7 +214,7 @@ test_that("explicit mobility rejects nonpositive de only when enabled", {
   )
 })
 
-test_that("diag human_move_probs preserves home-node delayed infection input", {
+test_that("diag human_move_probs preserves allocated home-node delayed infection input", {
   parameters <- list(
     get_parameters(list(human_population = 2L, human_mobility_enabled = TRUE, de = 1)),
     get_parameters(list(human_population = 3L, human_mobility_enabled = TRUE, de = 1))
@@ -224,6 +224,10 @@ test_that("diag human_move_probs preserves home-node delayed infection input", {
     parameters[[i]]$human_mobility_node_index <- as.integer(i)
   }
   variables <- lapply(parameters, create_variables)
+  variables[[1L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[1L]]$human_population))
+  variables[[2L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[2L]]$human_population))
+  variables[[1L]]$zeta <- individual::DoubleVariable$new(rep(1, parameters[[1L]]$human_population))
+  variables[[2L]]$zeta <- individual::DoubleVariable$new(rep(1, parameters[[2L]]$human_population))
   lagged_eir <- lapply(c(0, 0), function(default) list(LaggedValue$new(3, default)))
   context <- create_human_exposure_lag_context(
     parameters = parameters,
@@ -239,6 +243,6 @@ test_that("diag human_move_probs preserves home-node delayed infection input", {
   input_1 <- human_exposure_lag_get_infection_input(context, 1L, 4L, parameters[[1L]])
   input_2 <- human_exposure_lag_get_infection_input(context, 2L, 4L, parameters[[2L]])
 
-  expect_equal(input_1$infection_exposure, rep(5, 2))
-  expect_equal(input_2$infection_exposure, rep(7, 3))
+  expect_equal(input_1$infection_exposure, rep(5 / 2, 2))
+  expect_equal(input_2$infection_exposure, rep(7 / 3, 3))
 })
