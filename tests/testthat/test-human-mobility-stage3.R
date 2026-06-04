@@ -75,9 +75,13 @@ test_that("human exposure lag buffers use per-human defaults and interpolate", {
   )
 })
 
-test_that("diag human_move_probs records home-node unlagged exposure for residents", {
+test_that("diag human_move_probs records allocated home-node unlagged exposure for residents", {
   parameters <- human_mobility_stage3_params()
   variables <- lapply(parameters, create_variables)
+  variables[[1L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[1L]]$human_population))
+  variables[[2L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[2L]]$human_population))
+  variables[[1L]]$zeta <- individual::DoubleVariable$new(rep(1, parameters[[1L]]$human_population))
+  variables[[2L]]$zeta <- individual::DoubleVariable$new(rep(1, parameters[[2L]]$human_population))
   lagged_eir <- human_mobility_stage3_lagged(c(11, 22))
 
   context <- create_human_exposure_lag_context(
@@ -89,17 +93,21 @@ test_that("diag human_move_probs records home-node unlagged exposure for residen
   )
 
   human_exposure_lag_record_node(context, node_index = 1L, timestep = 1L, exposure = 5)
-  expect_equal(context$buffers[[1]]$get(1), rep(11, 2))
+  expect_equal(context$buffers[[1]]$get(1), rep(11 / 2, 2))
 
   human_exposure_lag_record_node(context, node_index = 2L, timestep = 1L, exposure = 7)
 
-  expect_equal(context$buffers[[1]]$get(1), rep(5, 2))
-  expect_equal(context$buffers[[2]]$get(1), rep(7, 3))
+  expect_equal(context$buffers[[1]]$get(1), rep(5 / 2, 2))
+  expect_equal(context$buffers[[2]]$get(1), rep(7 / 3, 3))
 })
 
-test_that("recording maps explicit travellers by current_node", {
+test_that("recording allocates destination exposure across explicit travellers and residents", {
   parameters <- human_mobility_stage3_params()
   variables <- lapply(parameters, create_variables)
+  variables[[1L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[1L]]$human_population))
+  variables[[2L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[2L]]$human_population))
+  variables[[1L]]$zeta <- individual::DoubleVariable$new(rep(1, parameters[[1L]]$human_population))
+  variables[[2L]]$zeta <- individual::DoubleVariable$new(rep(1, parameters[[2L]]$human_population))
   lagged_eir <- human_mobility_stage3_lagged(c(11, 22))
 
   variables[[1]]$current_node$queue_update(2L, 1L)
@@ -116,13 +124,17 @@ test_that("recording maps explicit travellers by current_node", {
   human_exposure_lag_record_node(context, node_index = 1L, timestep = 1L, exposure = 5)
   human_exposure_lag_record_node(context, node_index = 2L, timestep = 1L, exposure = 7)
 
-  expect_equal(context$buffers[[1]]$get(1), c(7, 5))
-  expect_equal(context$buffers[[2]]$get(1), rep(7, 3))
+  expect_equal(context$buffers[[1]]$get(1), c(7 / 4, 5))
+  expect_equal(context$buffers[[2]]$get(1), rep(7 / 4, 3))
 })
 
 test_that("reset_target clears replaced slots to home-node exposure defaults", {
   parameters <- human_mobility_stage3_params(population_1 = 3L)
   variables <- lapply(parameters, create_variables)
+  variables[[1L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[1L]]$human_population))
+  variables[[1L]]$zeta <- individual::DoubleVariable$new(rep(1, parameters[[1L]]$human_population))
+  variables[[2L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[2L]]$human_population))
+  variables[[2L]]$zeta <- individual::DoubleVariable$new(rep(1, parameters[[2L]]$human_population))
   lagged_eir <- human_mobility_stage3_lagged(c(11, 22))
   context <- create_human_exposure_lag_context(
     parameters = parameters,
@@ -145,8 +157,8 @@ test_that("reset_target clears replaced slots to home-node exposure defaults", {
     human_exposure_lag_context = context
   )
 
-  expect_equal(context$buffers[[1]]$get(1), c(3, 11, 5))
-  expect_equal(context$buffers[[1]]$get(2), c(6, 11, 8))
+  expect_equal(context$buffers[[1]]$get(1), c(3, 11 / 3, 5))
+  expect_equal(context$buffers[[1]]$get(2), c(6, 11 / 3, 8))
 })
 
 test_that("weighted exposure is optional and scalar per human when active", {
@@ -168,6 +180,10 @@ test_that("weighted exposure is optional and scalar per human when active", {
     p
   })
   active_variables <- lapply(active_parameters, create_variables)
+  active_variables[[1L]]$birth <- individual::DoubleVariable$new(rep(-1e12, active_parameters[[1L]]$human_population))
+  active_variables[[1L]]$zeta <- individual::DoubleVariable$new(rep(1, active_parameters[[1L]]$human_population))
+  active_variables[[2L]]$birth <- individual::DoubleVariable$new(rep(-1e12, active_parameters[[2L]]$human_population))
+  active_variables[[2L]]$zeta <- individual::DoubleVariable$new(rep(1, active_parameters[[2L]]$human_population))
   lagged_transmission_eir <- human_mobility_stage3_lagged(c(101, 202))
   active_context <- create_human_exposure_lag_context(
     parameters = active_parameters,
@@ -177,12 +193,69 @@ test_that("weighted exposure is optional and scalar per human when active", {
     lagged_transmission_eir = lagged_transmission_eir
   )
 
-  expect_equal(active_context$buffers[[1]]$get(0, weighted = TRUE), rep(101, 2))
+  expect_equal(active_context$buffers[[1]]$get(0, weighted = TRUE), rep(101 / 2, 2))
   human_exposure_lag_record_node(active_context, node_index = 1L, timestep = 1L, exposure = 5, weighted_exposure = 15)
   human_exposure_lag_record_node(active_context, node_index = 2L, timestep = 1L, exposure = 7, weighted_exposure = 25)
 
-  expect_equal(active_context$buffers[[1]]$get(1), rep(5, 2))
-  expect_equal(active_context$buffers[[1]]$get(1, weighted = TRUE), rep(15, 2))
+  expect_equal(active_context$buffers[[1]]$get(1), rep(5 / 2, 2))
+  expect_equal(active_context$buffers[[1]]$get(1, weighted = TRUE), rep(15 / 2, 2))
+})
+
+test_that("human exposure allocation uses biting weights and preserves destination totals", {
+  parameters <- human_mobility_stage3_params(population_1 = 2L, population_2 = 1L)
+  variables <- lapply(parameters, create_variables)
+  variables[[1L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[1L]]$human_population))
+  variables[[2L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[2L]]$human_population))
+  variables[[1L]]$zeta <- individual::DoubleVariable$new(c(1, 3))
+  variables[[2L]]$zeta <- individual::DoubleVariable$new(1)
+
+  context <- create_human_exposure_lag_context(
+    parameters = parameters,
+    variables = variables,
+    solvers = list(NULL, NULL),
+    lagged_eir = human_mobility_stage3_lagged(c(0, 0)),
+    lagged_transmission_eir = human_mobility_stage3_lagged(c(0, 0))
+  )
+
+  human_exposure_lag_record_node(context, node_index = 1L, timestep = 1L, exposure = 8)
+  human_exposure_lag_record_node(context, node_index = 2L, timestep = 1L, exposure = 9)
+
+  node_1_exposure <- context$buffers[[1L]]$get(1L)
+  node_2_exposure <- context$buffers[[2L]]$get(1L)
+  expect_equal(node_1_exposure, c(2, 6), tolerance = 1e-12)
+  expect_equal(node_2_exposure, 9, tolerance = 1e-12)
+  expect_equal(sum(node_1_exposure), 8, tolerance = 1e-12)
+  expect_equal(sum(node_2_exposure), 9, tolerance = 1e-12)
+  expect_lt(max(node_1_exposure), 8)
+})
+
+test_that("weighted human exposure uses the same biting allocation shares", {
+  parameters <- human_mobility_stage3_params(population_1 = 2L, population_2 = 1L)
+  parameters <- lapply(parameters, function(p) {
+    p$vector_infectivity_g_by_species <- list(gamb = 2)
+    p
+  })
+  variables <- lapply(parameters, create_variables)
+  variables[[1L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[1L]]$human_population))
+  variables[[2L]]$birth <- individual::DoubleVariable$new(rep(-1e12, parameters[[2L]]$human_population))
+  variables[[1L]]$zeta <- individual::DoubleVariable$new(c(1, 3))
+  variables[[2L]]$zeta <- individual::DoubleVariable$new(1)
+
+  context <- create_human_exposure_lag_context(
+    parameters = parameters,
+    variables = variables,
+    solvers = list(NULL, NULL),
+    lagged_eir = human_mobility_stage3_lagged(c(0, 0)),
+    lagged_transmission_eir = human_mobility_stage3_lagged(c(0, 0))
+  )
+
+  human_exposure_lag_record_node(context, node_index = 1L, timestep = 1L, exposure = 8, weighted_exposure = 20)
+  human_exposure_lag_record_node(context, node_index = 2L, timestep = 1L, exposure = 9, weighted_exposure = 45)
+
+  expect_equal(context$buffers[[1L]]$get(1L), c(2, 6), tolerance = 1e-12)
+  expect_equal(context$buffers[[1L]]$get(1L, weighted = TRUE), c(5, 15), tolerance = 1e-12)
+  expect_equal(context$buffers[[2L]]$get(1L), 9, tolerance = 1e-12)
+  expect_equal(context$buffers[[2L]]$get(1L, weighted = TRUE), 45, tolerance = 1e-12)
 })
 
 test_that("disabled mobility creates no human exposure lag context", {
