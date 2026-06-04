@@ -185,8 +185,8 @@ simulate_bites <- function(
   
   EIR <- 0
   transmission_signal <- 0
-  current_exposure <- 0
-  current_weighted_exposure <- 0
+  current_exposure_by_species <- numeric(length(parameters$species))
+  current_weighted_exposure_by_species <- numeric(length(parameters$species))
 
   for (s_i in seq_along(parameters$species)) {
     species_name <- parameters$species[[s_i]]
@@ -291,8 +291,8 @@ simulate_bites <- function(
       species_weighted_exposure,
       timestep
     )
-    current_exposure <- current_exposure + species_exposure
-    current_weighted_exposure <- current_weighted_exposure + species_weighted_exposure
+    current_exposure_by_species[[s_i]] <- species_exposure
+    current_weighted_exposure_by_species[[s_i]] <- species_weighted_exposure
 
     # lagged EIR
     if (is.null(mixing_fn)) {
@@ -503,8 +503,8 @@ simulate_bites <- function(
     human_exposure_lag_context,
     mixing_index,
     timestep,
-    current_exposure,
-    current_weighted_exposure
+    current_exposure_by_species,
+    current_weighted_exposure_by_species
   )
 
   transmission_multiplier <- if (EIR > 0) transmission_signal / EIR else 1
