@@ -26,6 +26,8 @@
 #' native metapopulation runs
 #' @param human_exposure_lag_context shared per-human exposure lag context for
 #' explicit mobility
+#' @param human_infectivity_lag_context shared per-human infectivity lag context
+#' for explicit mobility
 #' @noRd
 create_processes <- function(
     renderer,
@@ -43,7 +45,8 @@ create_processes <- function(
     lagged_transmission_eir = lagged_eir,
     enable_rendering = TRUE,
     human_mobility_context = NULL,
-    human_exposure_lag_context = NULL
+    human_exposure_lag_context = NULL,
+    human_infectivity_lag_context = NULL
 ) {
   
   # ========
@@ -121,6 +124,16 @@ create_processes <- function(
       )
     )
   }
+
+  if (human_mobility_enabled(parameters) && !is.null(human_infectivity_lag_context)) {
+    processes <- c(
+      processes,
+      human_infectivity_lag_process = create_human_infectivity_lag_process(
+        context = human_infectivity_lag_context,
+        node_index = parameters$human_mobility_node_index
+      )
+    )
+  }
   
   # =====================================================
   # Competing Hazard Outcomes (infections and disease progression)
@@ -176,7 +189,8 @@ create_processes <- function(
       mixing_index = mixing_index,
       infection_outcome = infection_outcome,
       lagged_transmission_eir = lagged_transmission_eir,
-      human_exposure_lag_context = human_exposure_lag_context
+      human_exposure_lag_context = human_exposure_lag_context,
+      human_infectivity_lag_context = human_infectivity_lag_context
     )
   )
   
@@ -391,7 +405,8 @@ create_processes <- function(
       events,
       renderer,
       parameters,
-      human_exposure_lag_context = human_exposure_lag_context
+      human_exposure_lag_context = human_exposure_lag_context,
+      human_infectivity_lag_context = human_infectivity_lag_context
     )
   )
 
