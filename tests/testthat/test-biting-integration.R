@@ -61,6 +61,7 @@ test_that('biting_process integrates mosquito effects and human infection', {
     NULL,
     1,
     lagged_eir,
+    NULL,
     NULL
   )
 
@@ -152,7 +153,8 @@ test_that('biting_process passes delayed human exposure when mobility is enabled
     NULL,
     1,
     lagged_eir,
-    human_exposure_lag_context
+    human_exposure_lag_context,
+    NULL
   )
 
   infection_args <- mockery::mock_args(infection_mock)[[1L]]
