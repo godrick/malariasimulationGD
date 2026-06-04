@@ -209,6 +209,71 @@ test_that("mobility process is inserted after mosquito releases and before bitin
   expect_false("human_infectivity_lag_process" %in% names(disabled_processes))
 })
 
+test_that("identity mobility rows do not consume RNG or start trips", {
+  parameters <- human_mobility_stage2_params(
+    list(human_mobility_enabled = TRUE, human_move_probs = diag(2)),
+    list(human_mobility_enabled = TRUE, human_move_probs = diag(2))
+  )
+  parameters <- lapply(seq_along(parameters), function(i) {
+    parameters[[i]]$human_mobility_enabled <- TRUE
+    parameters[[i]]$human_move_probs <- diag(2)
+    parameters[[i]]$human_mobility_node_index <- as.integer(i)
+    parameters[[i]]
+  })
+  variables <- lapply(parameters, create_variables)
+  context <- create_human_mobility_context(parameters, variables, timesteps = 1L)
+
+  set.seed(123)
+  seed_before <- .Random.seed
+  human_mobility_update_context(context, timestep = 1L)
+
+  expect_identical(.Random.seed, seed_before)
+  expect_equal(context$active_od, matrix(c(2L, 0L, 0L, 3L), nrow = 2, byrow = TRUE))
+  expect_equal(context$started_od, matrix(0L, nrow = 2, ncol = 2))
+  expect_equal(variables[[1L]]$current_node$get_values(), rep(1L, 2L))
+  expect_equal(variables[[2L]]$current_node$get_values(), rep(2L, 3L))
+
+  humans_present <- colSums(context$active_od)
+  visitors_present <- humans_present - diag(context$active_od)
+  residents_away <- rowSums(context$active_od) - diag(context$active_od)
+  trips_started <- rowSums(context$started_od) - diag(context$started_od)
+  expect_equal(visitors_present, c(0, 0))
+  expect_equal(residents_away, c(0, 0))
+  expect_equal(trips_started, c(0, 0))
+})
+
+test_that("non-identity mobility rows still sample and start trips", {
+  parameters <- human_mobility_stage2_params(
+    list(
+      human_mobility_enabled = TRUE,
+      human_move_probs = human_mobility_stage2_matrix(),
+      human_trip_duration_type = "fixed",
+      human_trip_duration_mean = 1
+    ),
+    list(
+      human_mobility_enabled = TRUE,
+      human_move_probs = human_mobility_stage2_matrix()
+    )
+  )
+  parameters <- lapply(seq_along(parameters), function(i) {
+    parameters[[i]]$human_mobility_enabled <- TRUE
+    parameters[[i]]$human_move_probs <- human_mobility_stage2_matrix()
+    parameters[[i]]$human_mobility_node_index <- as.integer(i)
+    parameters[[i]]
+  })
+  variables <- lapply(parameters, create_variables)
+  context <- create_human_mobility_context(parameters, variables, timesteps = 1L)
+
+  set.seed(123)
+  seed_before <- .Random.seed
+  human_mobility_update_context(context, timestep = 1L)
+
+  expect_false(identical(.Random.seed, seed_before))
+  expect_equal(variables[[1L]]$current_node$get_values(), rep(2L, 2L))
+  expect_equal(context$started_od[1L, ], c(0L, 2L))
+  expect_equal(rowSums(context$started_od) - diag(context$started_od), c(2L, 0L))
+})
+
 test_that("fixed L=1 is away for current timestep and home next timestep", {
   parameters <- human_mobility_stage2_params(list(
     human_mobility_enabled = TRUE,
