@@ -214,6 +214,146 @@ human_exposure_lag_node_defaults <- function(
   )
 }
 
+human_exposure_lag_node_species_defaults <- function(
+    parameters,
+    variables,
+    solvers,
+    weighted = FALSE,
+    lagged_values = NULL
+) {
+  lapply(
+    seq_along(parameters),
+    function(i) {
+      if (!is.null(lagged_values)) {
+        return(vapply(
+          lagged_values[[i]],
+          function(lagged) lagged$get(-.Machine$double.xmax),
+          numeric(1)
+        ))
+      }
+
+      vapply(
+        seq_along(parameters[[i]]$species),
+        function(species) {
+          if (isTRUE(weighted)) {
+            return(calculate_transmission_eir(species, solvers[[i]], variables[[i]], parameters[[i]], 0))
+          }
+          calculate_eir(species, solvers[[i]], variables[[i]], parameters[[i]], 0)
+        },
+        numeric(1)
+      )
+    }
+  )
+}
+
+human_exposure_lag_validate_node_exposure <- function(values, expected_length, label) {
+  values <- as.numeric(values)
+  if (length(values) != expected_length ||
+      anyNA(values) ||
+      any(!is.finite(values)) ||
+      any(values < 0)) {
+    stop(sprintf("%s must be a nonnegative finite numeric vector matching the number of mosquito species.", label), call. = FALSE)
+  }
+  values
+}
+
+human_exposure_lag_validate_current_node <- function(current_node, n_nodes) {
+  current_node <- as.integer(current_node)
+  if (anyNA(current_node) || any(current_node < 1L) || any(current_node > n_nodes)) {
+    stop("current_node must contain valid node indices for human exposure allocation.", call. = FALSE)
+  }
+  current_node
+}
+
+human_exposure_lag_biting_allocation_weights <- function(variables, parameters, timestep, species) {
+  age <- get_age(variables$birth$get_values(), timestep)
+  psi <- unique_biting_rate(age, parameters)
+  raw_weights <- human_biting_weights(
+    variables$zeta$get_values(),
+    psi,
+    human_slot_contact_multiplier_values(variables)
+  )
+  bite_probability <- prob_bitten(timestep, variables, species, parameters)$prob_bitten
+  weights <- raw_weights * bite_probability
+  if (length(weights) != parameters$human_population ||
+      anyNA(weights) ||
+      any(!is.finite(weights)) ||
+      any(weights < 0)) {
+    stop("Human biting allocation weights must be nonnegative and finite.", call. = FALSE)
+  }
+  weights
+}
+
+human_exposure_lag_destination_shares <- function(context, destination_node, species, timestep) {
+  shares <- vector("list", context$n_nodes)
+  total_weight <- 0
+
+  for (home_node in seq_len(context$n_nodes)) {
+    current_node <- human_exposure_lag_validate_current_node(
+      context$variables[[home_node]]$current_node$get_values(),
+      context$n_nodes
+    )
+    weights <- human_exposure_lag_biting_allocation_weights(
+      context$variables[[home_node]],
+      context$parameters[[home_node]],
+      timestep,
+      species
+    )
+    weights[current_node != destination_node] <- 0
+    shares[[home_node]] <- weights
+    total_weight <- total_weight + sum(weights)
+  }
+
+  if (!is.finite(total_weight) || total_weight <= 0) {
+    return(lapply(shares, function(x) rep(0, length(x))))
+  }
+
+  lapply(shares, function(x) x / total_weight)
+}
+
+human_exposure_lag_allocate_exposure <- function(context, timestep, node_exposure, node_weighted_exposure = NULL) {
+  exposure_by_home <- lapply(
+    context$parameters,
+    function(parameters) rep(0, parameters$human_population)
+  )
+  weighted_by_home <- if (isTRUE(context$weighted_active)) {
+    lapply(context$parameters, function(parameters) rep(0, parameters$human_population))
+  } else {
+    NULL
+  }
+
+  for (destination_node in seq_len(context$n_nodes)) {
+    species_exposure <- node_exposure[[destination_node]]
+    species_weighted_exposure <- if (isTRUE(context$weighted_active)) {
+      node_weighted_exposure[[destination_node]]
+    } else {
+      NULL
+    }
+
+    for (species in seq_along(species_exposure)) {
+      shares <- human_exposure_lag_destination_shares(
+        context,
+        destination_node,
+        species,
+        timestep
+      )
+      for (home_node in seq_len(context$n_nodes)) {
+        exposure_by_home[[home_node]] <- exposure_by_home[[home_node]] +
+          species_exposure[[species]] * shares[[home_node]]
+        if (isTRUE(context$weighted_active)) {
+          weighted_by_home[[home_node]] <- weighted_by_home[[home_node]] +
+            species_weighted_exposure[[species]] * shares[[home_node]]
+        }
+      }
+    }
+  }
+
+  list(
+    exposure = exposure_by_home,
+    weighted_exposure = weighted_by_home
+  )
+}
+
 create_human_exposure_lag_context <- function(
     parameters,
     variables,
@@ -227,14 +367,14 @@ create_human_exposure_lag_context <- function(
 
   n_nodes <- length(parameters)
   weighted_active <- human_exposure_lag_weighted_active(parameters)
-  exposure_defaults <- human_exposure_lag_node_defaults(
+  exposure_defaults <- human_exposure_lag_node_species_defaults(
     parameters,
     variables,
     solvers,
     lagged_values = lagged_eir
   )
   weighted_defaults <- if (isTRUE(weighted_active)) {
-    human_exposure_lag_node_defaults(
+    human_exposure_lag_node_species_defaults(
       parameters,
       variables,
       solvers,
@@ -247,18 +387,33 @@ create_human_exposure_lag_context <- function(
 
   context <- new.env(parent = emptyenv())
   context$n_nodes <- n_nodes
+  context$parameters <- parameters
   context$variables <- variables
   context$weighted_active <- weighted_active
   context$reported_timestep <- NA_real_
   context$reported <- rep(FALSE, n_nodes)
-  context$node_exposure <- rep(NA_real_, n_nodes)
-  context$node_weighted_exposure <- if (isTRUE(weighted_active)) rep(NA_real_, n_nodes) else NULL
+  context$node_exposure <- vector("list", n_nodes)
+  context$node_weighted_exposure <- if (isTRUE(weighted_active)) vector("list", n_nodes) else NULL
+
+  default_context <- new.env(parent = emptyenv())
+  default_context$n_nodes <- n_nodes
+  default_context$parameters <- parameters
+  default_context$variables <- variables
+  default_context$weighted_active <- weighted_active
+  default_context$reported_timestep <- NA_real_
+  allocated_defaults <- human_exposure_lag_allocate_exposure(
+    default_context,
+    timestep = 0,
+    node_exposure = exposure_defaults,
+    node_weighted_exposure = weighted_defaults
+  )
+
   context$buffers <- lapply(
     seq_along(parameters),
     function(i) {
-      default_exposure <- rep(exposure_defaults[[i]], parameters[[i]]$human_population)
+      default_exposure <- allocated_defaults$exposure[[i]]
       default_weighted <- if (isTRUE(weighted_active)) {
-        rep(weighted_defaults[[i]], parameters[[i]]$human_population)
+        allocated_defaults$weighted_exposure[[i]]
       } else {
         NULL
       }
@@ -280,31 +435,44 @@ human_exposure_lag_record_node <- function(context, node_index, timestep, exposu
   if (is.na(context$reported_timestep) || context$reported_timestep != timestep) {
     context$reported_timestep <- timestep
     context$reported[] <- FALSE
-    context$node_exposure[] <- NA_real_
+    context$node_exposure[] <- vector("list", context$n_nodes)
     if (isTRUE(context$weighted_active)) {
-      context$node_weighted_exposure[] <- NA_real_
+      context$node_weighted_exposure[] <- vector("list", context$n_nodes)
     }
   }
 
+  expected_species <- length(context$parameters[[node_index]]$species)
   context$reported[[node_index]] <- TRUE
-  context$node_exposure[[node_index]] <- as.numeric(exposure)
+  context$node_exposure[[node_index]] <- human_exposure_lag_validate_node_exposure(
+    exposure,
+    expected_species,
+    "exposure"
+  )
   if (isTRUE(context$weighted_active)) {
-    context$node_weighted_exposure[[node_index]] <- as.numeric(weighted_exposure)
+    context$node_weighted_exposure[[node_index]] <- human_exposure_lag_validate_node_exposure(
+      weighted_exposure,
+      expected_species,
+      "weighted_exposure"
+    )
   }
 
   if (!all(context$reported)) {
     return(invisible(NULL))
   }
 
+  allocated <- human_exposure_lag_allocate_exposure(
+    context,
+    timestep,
+    context$node_exposure,
+    context$node_weighted_exposure
+  )
+
   for (home_node in seq_len(context$n_nodes)) {
-    current_node <- context$variables[[home_node]]$current_node$get_values()
-    exposure_by_human <- context$node_exposure[current_node]
-    weighted_by_human <- if (isTRUE(context$weighted_active)) {
-      context$node_weighted_exposure[current_node]
-    } else {
-      NULL
-    }
-    context$buffers[[home_node]]$save(timestep, exposure_by_human, weighted_by_human)
+    context$buffers[[home_node]]$save(
+      timestep,
+      allocated$exposure[[home_node]],
+      if (isTRUE(context$weighted_active)) allocated$weighted_exposure[[home_node]] else NULL
+    )
   }
 
   invisible(NULL)
