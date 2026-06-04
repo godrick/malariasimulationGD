@@ -88,6 +88,49 @@ human_mobility_stage8_variable_state <- function(state, variable) {
   state$individual$variables[matches]
 }
 
+human_mobility_stage8_identity_equilibrium_params <- function(
+  mobility,
+  population = 50L,
+  init_EIR = 20
+) {
+  lapply(seq_len(2), function(i) {
+    values <- list(
+      human_population = population,
+      total_M = 40,
+      native_mosquito_backend = TRUE,
+      individual_mosquitoes = FALSE,
+      average_age = 1e12,
+      progress_bar = FALSE,
+      de = 1,
+      delay_gam = 1
+    )
+    if (isTRUE(mobility)) {
+      values$human_mobility_enabled <- TRUE
+      values$human_move_probs <- diag(2)
+      values$human_trip_duration_type <- "fixed"
+      values$human_trip_duration_mean <- 1
+    }
+    parameters <- set_equilibrium(get_parameters(values), init_EIR = init_EIR)
+    parameters$human_mobility_node_index <- as.integer(i)
+    parameters$human_mobility_n_nodes <- 2L
+    parameters
+  })
+}
+
+human_mobility_stage8_identity_equilibrium_run <- function(mobility, timesteps = 10L) {
+  set.seed(1234)
+  run_metapop_simulation(
+    timesteps = timesteps,
+    parameters = human_mobility_stage8_identity_equilibrium_params(mobility),
+    mixing_tt = 1,
+    export_mixing = list(diag(2)),
+    import_mixing = list(diag(2)),
+    p_captured_tt = 1,
+    p_captured = list(matrix(0, nrow = 2, ncol = 2)),
+    p_success = 0
+  )
+}
+
 test_that("mobility diagnostics allocate only when requested and rendering is enabled", {
   parameters <- human_mobility_stage8_params()
   variables <- lapply(parameters, create_variables)
@@ -179,6 +222,29 @@ test_that("per-human lag buffers remain bounded by configured lag history", {
   expect_lte(length(infectivity_state$timesteps), 4L)
   expect_lte(nrow(infectivity_state$infectivity), 4L)
   expect_equal(infectivity_state$timesteps, 7:10)
+})
+
+test_that("identity mobility preserves first-timestep biting RNG and avoids infection inflation", {
+  no_mobility <- human_mobility_stage8_identity_equilibrium_run(mobility = FALSE)
+  identity_mobility <- human_mobility_stage8_identity_equilibrium_run(mobility = TRUE)
+
+  for (node in seq_along(no_mobility)) {
+    expect_equal(identity_mobility[[node]]$n_bitten[[1L]], no_mobility[[node]]$n_bitten[[1L]])
+    expect_equal(identity_mobility[[node]]$visitors_present, rep(0, nrow(identity_mobility[[node]])))
+    expect_equal(identity_mobility[[node]]$residents_away, rep(0, nrow(identity_mobility[[node]])))
+    expect_equal(identity_mobility[[node]]$trips_started, rep(0, nrow(identity_mobility[[node]])))
+  }
+
+  no_mobility_infections <- sum(vapply(no_mobility, function(output) sum(output$n_infections), numeric(1)))
+  identity_mobility_infections <- sum(vapply(identity_mobility, function(output) sum(output$n_infections), numeric(1)))
+  expect_lte(identity_mobility_infections, max(1, 2 * no_mobility_infections))
+
+  detection_column <- "p_detect_lm_730_3650"
+  if (all(vapply(no_mobility, function(output) detection_column %in% names(output), logical(1)))) {
+    no_mobility_detection <- sum(vapply(no_mobility, function(output) tail(output[[detection_column]], 1), numeric(1)))
+    identity_mobility_detection <- sum(vapply(identity_mobility, function(output) tail(output[[detection_column]], 1), numeric(1)))
+    expect_lte(identity_mobility_detection, max(1, 2 * no_mobility_detection))
+  }
 })
 
 test_that("checkpoint resume preserves mobility outputs, state, and lag buffers", {
