@@ -17,6 +17,7 @@
 #' lagged_infectivity list (default: 1)
 #' @param infection_outcome competing hazards object for infection rates
 #' @param human_exposure_lag_context optional per-human exposure lag context
+#' @param human_infectivity_lag_context optional per-human infectivity lag context
 #' @param timestep the current timestep
 #' @noRd
 create_biting_process <- function(
@@ -32,7 +33,8 @@ create_biting_process <- function(
   mixing_index = 1,
   infection_outcome,
   lagged_transmission_eir = lagged_eir,
-  human_exposure_lag_context = NULL
+  human_exposure_lag_context = NULL,
+  human_infectivity_lag_context = NULL
   ) {
   function(timestep) {
     # Calculate combined EIR
@@ -51,7 +53,8 @@ create_biting_process <- function(
       mixing_fn,
       mixing_index,
       lagged_transmission_eir,
-      human_exposure_lag_context
+      human_exposure_lag_context,
+      human_infectivity_lag_context
     )
 
     if (human_mobility_enabled(parameters)) {
@@ -107,7 +110,8 @@ simulate_bites <- function(
   mixing_fn = NULL,
   mixing_index = 1,
   lagged_transmission_eir = lagged_eir,
-  human_exposure_lag_context = NULL
+  human_exposure_lag_context = NULL,
+  human_infectivity_lag_context = NULL
   ) {
   bitten_humans <- individual::Bitset$new(parameters$human_population)
   n_bites_per_person <- numeric(0)
@@ -116,15 +120,11 @@ simulate_bites <- function(
   infectivity_weighting_active <- FALSE
   native_backend <- native_mosquito_backend_enabled(parameters)
   
-  human_infectivity <- variables$infectivity$get_values()
-  if (parameters$tbv) {
-    human_infectivity <- account_for_tbv(
-      timestep,
-      human_infectivity,
-      variables,
-      parameters
-    )
-  }
+  human_infectivity <- human_infectivity_lag_current_values(
+    timestep,
+    variables,
+    parameters
+  )
   renderer$render('infectivity', mean(human_infectivity), timestep)
   
   # Calculate pi (the relative biting rate for each human)
@@ -350,7 +350,13 @@ simulate_bites <- function(
 
     lagged_infectivity$save(sum(human_infectivity * .pi), timestep)
 
-    if (is.null(mixing_fn)) {
+    if (human_mobility_enabled(parameters)) {
+      infectivity <- human_infectivity_lag_get_node_reservoir(
+        human_infectivity_lag_context,
+        mixing_index,
+        timestep
+      )
+    } else if (is.null(mixing_fn)) {
       infectivity <- lagged_infectivity$get(timestep - parameters$delay_gam)
     } else {
       infectivity <- mixing_fn(timestep=timestep)$inf[[mixing_index]]
@@ -705,18 +711,23 @@ human_slot_contact_multiplier_values <- function(variables) {
   variables$human_slot_contact_multiplier$get_values()
 }
 
-human_pi <- function(zeta, psi, human_slot_contact_multiplier = NULL) {
+human_biting_weights <- function(zeta, psi, human_slot_contact_multiplier = NULL) {
   weights <- zeta * psi
   if (!is.null(human_slot_contact_multiplier)) {
-    # human_pi() is conditional on a bite happening in this node, so these
-    # weights must be normalized. The same slot multipliers enter the
-    # unconditional node contact rate through human_slot_contact_rate_multiplier().
     human_slot_contact_multiplier <- validate_human_slot_contact_multiplier(
       human_slot_contact_multiplier,
       length(weights)
     )
     weights <- weights * human_slot_contact_multiplier
   }
+  weights
+}
+
+human_pi <- function(zeta, psi, human_slot_contact_multiplier = NULL) {
+  # human_pi() is conditional on a bite happening in this node, so these
+  # weights must be normalized. The same slot multipliers enter the
+  # unconditional node contact rate through human_slot_contact_rate_multiplier().
+  weights <- human_biting_weights(zeta, psi, human_slot_contact_multiplier)
   weights / sum(weights)
 }
 
