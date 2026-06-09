@@ -35,3 +35,6 @@ test-scripts/seven_node_example/output/quick/*
 test-scripts/seven_node_example/output/careful/*
 !test-scripts/seven_node_example/output/careful/.gitkeep
 .positai
+test-scripts/*.csv
+test-scripts/**/*.csv
+
