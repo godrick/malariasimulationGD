@@ -53,6 +53,14 @@ native_test_expected_total_M <- function(parameters, init_EIR, species_i = 1L) {
   init_EIR * parameters$human_population / 365 / denominator
 }
 
+native_test_expected_denominator <- function(parameters) {
+  sum(vnapply(seq_along(parameters$species), function(species_i) {
+    traits <- equilibrium_species_traits(parameters, species_i)
+    rho <- native_test_expected_rho(parameters, species_i)
+    parameters$species_proportions[[species_i]] * traits$a * rho
+  }))
+}
+
 native_test_equilibrium_metrics <- function(parameters, timesteps = 30L, species_i = 1L) {
   models <- parameterise_mosquito_models(parameters, timesteps = timesteps)
   solvers <- parameterise_solvers(models, parameters)
@@ -302,6 +310,80 @@ test_that("native_total_M EIP sensitivity matches native equations", {
     expect_equal(metrics$infectious_fraction, native_test_expected_rho(parameters), tolerance = 1e-8)
     expect_equal(metrics$annual_eir, init_EIR, tolerance = 1e-6)
     expect_equal(metrics$final_totals, metrics$initial_totals, tolerance = 1e-5)
+  }
+})
+
+test_that("native_total_M applies species proportions once for two species", {
+  init_EIR <- 7
+  species_proportions <- c(0.7, 0.3)
+  parameters <- get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = FALSE,
+    model_seasonality = FALSE,
+    bednets = FALSE,
+    spraying = FALSE,
+    move_probs = NULL,
+    move_rates = NULL,
+    species = c("sp1", "sp2"),
+    species_proportions = species_proportions,
+    beta = c(sp1 = 18, sp2 = 26),
+    blood_meal_rates = c(0.25, 0.42),
+    foraging_time = c(0.5, 0.5),
+    Q0 = c(0.9, 0.75),
+    phi_bednets = c(0.8, 0.8),
+    phi_indoors = c(0.85, 0.85),
+    mum = c(0.12, 0.18)
+  ))
+  parameters <- set_equilibrium(parameters, init_EIR, native_total_M = TRUE)
+
+  expect_true(is.finite(parameters$total_M))
+  expect_gt(parameters$total_M, 0)
+
+  denominator <- native_test_expected_denominator(parameters)
+  denominator_twice <- sum(vnapply(seq_along(parameters$species), function(species_i) {
+    traits <- equilibrium_species_traits(parameters, species_i)
+    rho <- native_test_expected_rho(parameters, species_i)
+    parameters$species_proportions[[species_i]]^2 * traits$a * rho
+  }))
+  expect_equal(
+    parameters$total_M,
+    init_EIR * parameters$human_population / 365 / denominator,
+    tolerance = 1e-8
+  )
+  expect_false(isTRUE(all.equal(
+    parameters$total_M,
+    init_EIR * parameters$human_population / 365 / denominator_twice,
+    tolerance = 1e-8
+  )))
+
+  models <- parameterise_mosquito_models(parameters, timesteps = 30)
+  solvers <- parameterise_solvers(models, parameters)
+  initial <- lapply(solvers, function(solver) solver$get_summary())
+  adult_female <- vnapply(initial, function(summary) sum(summary$female))
+  annual_eir <- vnapply(seq_along(parameters$species), function(species_i) {
+    traits <- equilibrium_species_traits(parameters, species_i)
+    traits$a * sum(initial[[species_i]]$infectious) * 365 / parameters$human_population
+  })
+
+  expect_equal(adult_female, species_proportions * parameters$total_M, tolerance = 1e-6)
+  expect_equal(sum(annual_eir), init_EIR, tolerance = 1e-6)
+
+  initial_totals <- lapply(initial, `[[`, "totals")
+  for (t in 0:29) {
+    for (species_i in seq_along(parameters$species)) {
+      native_mosquito_model_update(
+        models[[species_i]],
+        timestep = t,
+        mu = parameters$mum[[species_i]],
+        foim = parameters$init_foim,
+        f = parameters$blood_meal_rates[[species_i]]
+      )
+      solvers[[species_i]]$step()
+    }
+  }
+  final_totals <- lapply(solvers, function(solver) solver$get_summary()$totals)
+  for (species_i in seq_along(parameters$species)) {
+    expect_equal(final_totals[[species_i]], initial_totals[[species_i]], tolerance = 1e-5)
   }
 })
 
