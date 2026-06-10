@@ -759,6 +759,54 @@ native_carrying_capacity_at <- function(lookup, timestep) {
   )
 }
 
+native_integerise_counts_preserve_total <- function(expected_counts) {
+  if (length(expected_counts) == 0L) {
+    return(numeric(0))
+  }
+  expected_counts <- as.numeric(expected_counts)
+  if (any(!is.finite(expected_counts)) || any(expected_counts < 0)) {
+    stop("Native stochastic mosquito initialization received invalid expected counts.", call. = FALSE)
+  }
+
+  total <- round(sum(expected_counts))
+  counts <- floor(expected_counts)
+  remainder <- as.integer(total - sum(counts))
+  if (remainder > 0) {
+    fractions <- expected_counts - counts
+    recipients <- order(fractions, decreasing = TRUE)[seq_len(remainder)]
+    counts[recipients] <- counts[recipients] + 1
+  }
+  counts
+}
+
+native_integerise_exact_equilibrium <- function(eq) {
+  eq$egg <- native_integerise_counts_preserve_total(eq$egg)
+  eq$larv <- native_integerise_counts_preserve_total(eq$larv)
+  eq$pup <- native_integerise_counts_preserve_total(eq$pup)
+  eq$male <- native_integerise_counts_preserve_total(eq$male)[[1]]
+
+  female_counts <- native_integerise_counts_preserve_total(c(
+    eq$female_S,
+    eq$female_E,
+    eq$female_I
+  ))
+  nEIP <- length(eq$female_E)
+  eq$female_S <- female_counts[[1]]
+  if (nEIP > 0L) {
+    eq$female_E <- female_counts[seq_len(nEIP) + 1L]
+  } else {
+    eq$female_E <- numeric(0)
+  }
+  eq$female_I <- female_counts[[length(female_counts)]]
+  eq
+}
+
+native_integerise_initial_counts <- function(init_counts) {
+  init_counts[ODE_INDICES] <- native_integerise_counts_preserve_total(init_counts[ODE_INDICES])
+  init_counts[ADULT_ODE_INDICES] <- native_integerise_counts_preserve_total(init_counts[ADULT_ODE_INDICES])
+  init_counts
+}
+
 native_initial_state <- function(parameters, species_i, cube_info, index) {
   state <- numeric(index$total_state_len)
   wt <- cube_info$wild_type_index
@@ -769,6 +817,12 @@ native_initial_state <- function(parameters, species_i, cube_info, index) {
   for (node in seq_along(parameters)) {
     eq <- native_exact_equilibrium_node(parameters[[node]], species_i, cube_info, timestep = 0L)
     if (isTRUE(eq$valid)) {
+      if (isTRUE(parameters[[node]]$individual_mosquitoes)) {
+        # The stochastic native backend represents finite mosquito counts.
+        # total_M remains the continuous calibrated expectation; only the
+        # initialized state is integerized.
+        eq <- native_integerise_exact_equilibrium(eq)
+      }
       state[index$egg_ix[, wt, node]] <- eq$egg
       state[index$larv_ix[, wt, node]] <- eq$larv
       state[index$pup_ix[, wt, node]] <- eq$pup
@@ -788,6 +842,9 @@ native_initial_state <- function(parameters, species_i, cube_info, index) {
         parameters[[node]]$init_foim,
         parameters[[node]]$total_M * parameters[[node]]$species_proportions[[species_i]]
       )
+      if (isTRUE(parameters[[node]]$individual_mosquitoes)) {
+        init_counts <- native_integerise_initial_counts(init_counts)
+      }
       adult_total <- sum(init_counts[ADULT_ODE_INDICES])
 
       state[index$egg_ix[1L, wt, node]] <- init_counts[[ODE_INDICES[["E"]]]]

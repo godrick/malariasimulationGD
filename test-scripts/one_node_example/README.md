@@ -35,11 +35,19 @@ available, then builds a one-node native backend parameter set using
 - Human population: `1000`
 - Initial annual EIR: `10`
 - Native mosquito backend: `native_mosquito_backend = TRUE`
-- Deterministic native mosquitoes: `individual_mosquitoes = FALSE`
+- Stochastic finite native mosquitoes: `individual_mosquitoes = TRUE`
 - Mosquito movement: `move_probs = matrix(1, 1, 1)`, `move_rates = 0`
 - Human movement: `human_mobility_enabled = FALSE`
 - Seasonality: `model_seasonality = FALSE`
 - Release: `5000` male `HH` mosquitoes on day `90`
+
+For `individual_mosquitoes = TRUE`, `native_total_M` solves the continuous adult
+mosquito abundance needed to match the requested annual EIR. The initialized
+mosquito state is then integerized because the individual backend represents
+finite mosquitoes. Therefore realised initial EIR may differ slightly from
+requested `init_EIR`. The deterministic backend preserves the continuous target
+exactly; the stochastic individual backend preserves integer mosquito counts and
+reports the realised EIR.
 
 ## Fitness Costs
 

@@ -24,3 +24,12 @@ This will update the IBM parameters to match the
 equilibrium parameters and set up the initial human and mosquito population
 to achieve init_EIR
 }
+\details{
+For \code{individual_mosquitoes = TRUE}, \code{native_total_M}
+solves the continuous adult mosquito abundance needed to match the requested
+annual EIR. The initialized mosquito state is then integerized because the
+individual backend represents finite mosquitoes. Therefore realised initial
+EIR may differ slightly from requested \code{init_EIR}. The deterministic
+backend preserves the continuous target exactly; the stochastic individual
+backend preserves integer mosquito counts and reports the realised EIR.
+}

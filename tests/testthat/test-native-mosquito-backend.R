@@ -61,6 +61,10 @@ native_test_expected_denominator <- function(parameters) {
   }))
 }
 
+native_test_integerish <- function(x, tolerance = 1e-8) {
+  isTRUE(all.equal(as.numeric(x), round(as.numeric(x)), tolerance = tolerance))
+}
+
 native_test_equilibrium_metrics <- function(parameters, timesteps = 30L, species_i = 1L) {
   models <- parameterise_mosquito_models(parameters, timesteps = timesteps)
   solvers <- parameterise_solvers(models, parameters)
@@ -410,6 +414,22 @@ test_that("set_equilibrium preserves legacy total_M by default", {
   expect_equal(parameters$total_M, equilibrium_total_M(parameters, init_EIR), tolerance = 1e-8)
 })
 
+test_that("native deterministic exact initialization keeps continuous counts", {
+  parameters <- get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = FALSE,
+    total_M = 100.5,
+    init_foim = 0
+  ))
+
+  models <- parameterise_mosquito_models(parameters, timesteps = 1)
+  solvers <- parameterise_solvers(models, parameters)
+  summary <- solvers[[1]]$get_summary()
+
+  expect_equal(sum(summary$female), 100.5, tolerance = 1e-8)
+  expect_false(native_test_integerish(sum(summary$female)))
+})
+
 test_that("native stochastic mosquito backend parameterises and steps", {
   parameters <- get_parameters(list(
     native_mosquito_backend = TRUE,
@@ -439,6 +459,127 @@ test_that("native stochastic mosquito backend parameterises and steps", {
   summary <- solvers[[1]]$get_summary()
   expect_true(all(summary$totals >= 0))
   expect_false(anyNA(summary$totals))
+})
+
+test_that("native stochastic exact initialization integerizes adult and EIP counts", {
+  parameters <- get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = TRUE,
+    cube = make_native_test_cube(),
+    progress_bar = FALSE
+  ))
+  parameters$native_mosquito_nEIP <- 3L
+  parameters <- set_equilibrium(parameters, 5, native_total_M = TRUE)
+
+  models <- suppressWarnings(parameterise_mosquito_models(parameters, timesteps = 2))
+  solvers <- parameterise_solvers(models, parameters)
+  model <- models[[1]]
+  solver <- solvers[[1]]
+  summary <- solver$get_summary()
+
+  expect_true(native_test_integerish(summary$female))
+  expect_true(native_test_integerish(summary$male))
+  expect_true(native_test_integerish(sum(summary$female) + sum(summary$male)))
+  expect_true(native_test_integerish(summary$totals[c("Sm", "Pm", "Im")]))
+
+  state <- solver$get_native_state()
+  index <- model$shared$index
+  wt <- model$cube_info$wild_type_index
+  stage_counts <- state[index$fem_ix[wt, wt, seq_len(index$nStages), 1L]]
+  expect_true(native_test_integerish(stage_counts))
+  expect_equal(sum(stage_counts), sum(summary$female), tolerance = 1e-8)
+  expect_true(all(is.finite(state)))
+  expect_false(anyNA(state))
+  expect_true(all(state >= 0))
+  expect_true(native_test_integerish(state))
+})
+
+test_that("native stochastic fallback initialization integerizes counts", {
+  cube <- make_native_test_cube()
+  cube$ih["WW", "WW", "WW"] <- 0.5
+  cube$ih["WW", "WW", "HH"] <- 0.5
+  parameters <- get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = TRUE,
+    cube = cube,
+    total_M = 100.5,
+    init_foim = 0.01,
+    progress_bar = FALSE
+  ))
+
+  models <- suppressWarnings(parameterise_mosquito_models(parameters, timesteps = 1))
+  solvers <- parameterise_solvers(models, parameters)
+  summary <- solvers[[1]]$get_summary()
+  state <- solvers[[1]]$get_native_state()
+
+  expect_true(native_test_integerish(summary$female))
+  expect_true(native_test_integerish(summary$male))
+  expect_true(native_test_integerish(summary$totals))
+  expect_true(native_test_integerish(state))
+  expect_true(all(is.finite(state)))
+  expect_false(anyNA(state))
+  expect_true(all(state >= 0))
+})
+
+test_that("native stochastic initialization integerizes two-species counts", {
+  species_proportions <- c(0.7, 0.3)
+  parameters <- get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = TRUE,
+    cube = make_native_test_cube(),
+    species = c("sp1", "sp2"),
+    species_proportions = species_proportions,
+    beta = c(sp1 = 18, sp2 = 26),
+    blood_meal_rates = c(0.25, 0.42),
+    foraging_time = c(0.5, 0.5),
+    Q0 = c(0.9, 0.75),
+    phi_bednets = c(0.8, 0.8),
+    phi_indoors = c(0.85, 0.85),
+    mum = c(0.12, 0.18),
+    progress_bar = FALSE
+  ))
+  parameters <- set_equilibrium(parameters, 7, native_total_M = TRUE)
+
+  models <- suppressWarnings(parameterise_mosquito_models(parameters, timesteps = 2))
+  solvers <- parameterise_solvers(models, parameters)
+  summaries <- lapply(solvers, function(solver) solver$get_summary())
+  female_totals <- vnapply(summaries, function(summary) sum(summary$female))
+  male_totals <- vnapply(summaries, function(summary) sum(summary$male))
+  adult_totals <- female_totals + male_totals
+
+  expect_true(native_test_integerish(female_totals))
+  expect_true(native_test_integerish(male_totals))
+  expect_true(native_test_integerish(adult_totals))
+  expect_equal(
+    female_totals,
+    round(species_proportions * parameters$total_M),
+    tolerance = 1e-8
+  )
+  expect_true(all(abs(female_totals - species_proportions * parameters$total_M) <= 0.5))
+})
+
+test_that("native stochastic genotype outputs have integer adult denominators", {
+  parameters <- get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = TRUE,
+    cube = make_native_test_cube(),
+    progress_bar = FALSE
+  ))
+  parameters <- set_equilibrium(parameters, 5, native_total_M = TRUE)
+
+  set.seed(1)
+  sim <- suppressWarnings(run_simulation(timesteps = 5, parameters = parameters))
+  female <- attr(sim, "mosquito_genotype_counts_female")
+  male <- attr(sim, "mosquito_genotype_counts_male")
+  expect_false(is.null(female))
+  expect_false(is.null(male))
+  expect_true(native_test_integerish(female))
+  expect_true(native_test_integerish(male))
+  expect_true(native_test_integerish(rowSums(female) + rowSums(male)))
+  expect_true(all(is.finite(female)))
+  expect_true(all(is.finite(male)))
+  expect_true(all(female >= 0))
+  expect_true(all(male >= 0))
 })
 
 test_that("native backend rejects incompatible restored state lengths", {

@@ -262,6 +262,13 @@ remove_unused_equilibrium <- function(params) {
 #' @param native_total_M if TRUE, and the native mosquito backend is enabled,
 #' calculate total_M from the native all-wild-type mosquito equations instead
 #' of the legacy mosquito equilibrium approximation
+#' @details For \code{individual_mosquitoes = TRUE}, \code{native_total_M}
+#' solves the continuous adult mosquito abundance needed to match the requested
+#' annual EIR. The initialized mosquito state is then integerized because the
+#' individual backend represents finite mosquitoes. Therefore realised initial
+#' EIR may differ slightly from requested \code{init_EIR}. The deterministic
+#' backend preserves the continuous target exactly; the stochastic individual
+#' backend preserves integer mosquito counts and reports the realised EIR.
 #' @export
 set_equilibrium <- function(parameters, init_EIR, eq_params = NULL, native_total_M = FALSE) {
   if (isTRUE(native_total_M) &&
