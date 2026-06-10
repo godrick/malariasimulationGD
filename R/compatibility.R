@@ -259,8 +259,21 @@ remove_unused_equilibrium <- function(params) {
 #' population)
 #' @param eq_params parameters from the malariaEquilibrium package, if null.
 #' The default malariaEquilibrium parameters will be used
+#' @param native_total_M if TRUE, and the native mosquito backend is enabled,
+#' calculate total_M from the native all-wild-type mosquito equations instead
+#' of the legacy mosquito equilibrium approximation
 #' @export
-set_equilibrium <- function(parameters, init_EIR, eq_params = NULL) {
+set_equilibrium <- function(parameters, init_EIR, eq_params = NULL, native_total_M = FALSE) {
+  if (isTRUE(native_total_M) &&
+      length(init_EIR) == 1L &&
+      is.finite(init_EIR) &&
+      init_EIR == 0) {
+    stop(
+      "native_total_M does not support init_EIR = 0 because malariaEquilibrium requires EIR > 0.",
+      call. = FALSE
+    )
+  }
+
   if(parameters$parasite == "falciparum"){
     if (is.null(eq_params)) {
       eq_params <- translate_parameters(parameters)
@@ -306,5 +319,16 @@ set_equilibrium <- function(parameters, init_EIR, eq_params = NULL) {
       parameters
     )
   }
+
+  if (isTRUE(native_total_M)) {
+    if (!native_mosquito_backend_enabled(parameters)) {
+      stop("native_total_M requires native_mosquito_backend = TRUE.", call. = FALSE)
+    }
+    total_M <- native_equilibrium_total_M(parameters, init_EIR)
+    parameters <- parameterise_total_M(parameters, total_M)
+    parameters$native_total_M_equilibrium <- TRUE
+    return(parameters)
+  }
+
   parameterise_mosquito_equilibrium(parameters, init_EIR)
 }

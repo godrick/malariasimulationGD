@@ -23,6 +23,70 @@ make_native_test_cube <- function() {
   )
 }
 
+native_test_c_wt <- function(parameters) {
+  cube_info <- cube_genotype_info(parameters$cube)
+  c_vec <- native_align_cube_vec(
+    if (is.null(parameters$cube)) NULL else parameters$cube$c,
+    cube_info$genotypesID,
+    1
+  )
+  c_vec[[cube_info$wild_type_index]]
+}
+
+native_test_expected_rho <- function(parameters, species_i = 1L) {
+  cfg <- native_mosquito_stage_config(parameters)
+  traits <- equilibrium_species_traits(parameters, species_i)
+  lambda <- native_test_c_wt(parameters) * parameters$init_foim
+  survival <- if (cfg$nEIP > 0L) {
+    rEIP <- cfg$nEIP / parameters$dem
+    (rEIP / (rEIP + traits$muF))^cfg$nEIP
+  } else {
+    1
+  }
+  lambda / (lambda + traits$muF) * survival
+}
+
+native_test_expected_total_M <- function(parameters, init_EIR, species_i = 1L) {
+  traits <- equilibrium_species_traits(parameters, species_i)
+  rho <- native_test_expected_rho(parameters, species_i)
+  denominator <- parameters$species_proportions[[species_i]] * traits$a * rho
+  init_EIR * parameters$human_population / 365 / denominator
+}
+
+native_test_equilibrium_metrics <- function(parameters, timesteps = 30L, species_i = 1L) {
+  models <- parameterise_mosquito_models(parameters, timesteps = timesteps)
+  solvers <- parameterise_solvers(models, parameters)
+  model <- models[[species_i]]
+  solver <- solvers[[species_i]]
+
+  initial <- solver$get_summary()
+  initial_totals <- initial$totals
+
+  for (t in seq_len(timesteps) - 1L) {
+    native_mosquito_model_update(
+      model,
+      timestep = t,
+      mu = parameters$mum[[species_i]],
+      foim = parameters$init_foim,
+      f = parameters$blood_meal_rates[[species_i]]
+    )
+    solver$step()
+  }
+
+  final <- solver$get_summary()
+  traits <- equilibrium_species_traits(parameters, species_i)
+  adult_female <- sum(initial$female)
+  infectious_female <- sum(initial$infectious)
+
+  list(
+    adult_female = adult_female,
+    infectious_fraction = infectious_female / adult_female,
+    annual_eir = traits$a * infectious_female * 365 / parameters$human_population,
+    initial_totals = initial_totals,
+    final_totals = final$totals
+  )
+}
+
 test_that("native deterministic mosquito backend parameterises and steps", {
   parameters <- get_parameters(list(
     native_mosquito_backend = TRUE,
@@ -118,6 +182,150 @@ test_that("native deterministic backend stays at equilibrium with multistage ove
 
   final <- solver$get_summary()$totals
   expect_equal(final, initial, tolerance = 1e-5)
+})
+
+test_that("native_total_M uses default c_WT and initializes rendered EIR", {
+  init_EIR <- 5
+  parameters <- get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = FALSE,
+    cube = NULL
+  ))
+  parameters <- set_equilibrium(parameters, init_EIR, native_total_M = TRUE)
+
+  expect_true(parameters$native_total_M_equilibrium)
+  expect_equal(native_test_c_wt(parameters), 1)
+  expect_equal(parameters$total_M, native_test_expected_total_M(parameters, init_EIR), tolerance = 1e-8)
+
+  metrics <- native_test_equilibrium_metrics(parameters)
+  expect_equal(metrics$adult_female, parameters$total_M, tolerance = 1e-6)
+  expect_equal(metrics$infectious_fraction, native_test_expected_rho(parameters), tolerance = 1e-8)
+  expect_equal(metrics$annual_eir, init_EIR, tolerance = 1e-6)
+  expect_equal(metrics$final_totals, metrics$initial_totals, tolerance = 1e-5)
+})
+
+test_that("native_total_M uses cube$c_WT and keeps non-WT c isolated", {
+  init_EIR <- 5
+  cube <- make_native_test_cube()
+  default <- set_equilibrium(get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = FALSE,
+    cube = cube
+  )), init_EIR, native_total_M = TRUE)
+
+  cube_low_wt <- cube
+  cube_low_wt$c["WW"] <- 0.5
+  wt_scaled <- set_equilibrium(get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = FALSE,
+    cube = cube_low_wt
+  )), init_EIR, native_total_M = TRUE)
+
+  cube_non_wt <- cube
+  cube_non_wt$c["HH"] <- 0.05
+  non_wt_scaled <- set_equilibrium(get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = FALSE,
+    cube = cube_non_wt
+  )), init_EIR, native_total_M = TRUE)
+
+  expect_gt(wt_scaled$total_M, default$total_M)
+  expect_equal(non_wt_scaled$total_M, default$total_M, tolerance = 1e-8)
+
+  metrics <- native_test_equilibrium_metrics(wt_scaled)
+  expect_equal(metrics$annual_eir, init_EIR, tolerance = 1e-6)
+  expect_equal(metrics$infectious_fraction, native_test_expected_rho(wt_scaled), tolerance = 1e-8)
+})
+
+test_that("native_total_M validates all-WT assumptions and denominator", {
+  cube <- make_native_test_cube()
+
+  omega_bad <- cube
+  omega_bad$omega["WW"] <- 0.9
+  expect_error(
+    set_equilibrium(get_parameters(list(
+      native_mosquito_backend = TRUE,
+      individual_mosquitoes = FALSE,
+      cube = omega_bad
+    )), 5, native_total_M = TRUE),
+    "omega_WT"
+  )
+
+  cross_bad <- cube
+  cross_bad$ih["WW", "WW", "WW"] <- 0
+  cross_bad$ih["WW", "WW", "HH"] <- 1
+  expect_error(
+    set_equilibrium(get_parameters(list(
+      native_mosquito_backend = TRUE,
+      individual_mosquitoes = FALSE,
+      cube = cross_bad
+    )), 5, native_total_M = TRUE),
+    "wild-type self-cross"
+  )
+
+  c_bad <- cube
+  c_bad$c["WW"] <- 0
+  expect_error(
+    set_equilibrium(get_parameters(list(
+      native_mosquito_backend = TRUE,
+      individual_mosquitoes = FALSE,
+      cube = c_bad
+    )), 5, native_total_M = TRUE),
+    "c_WT > 0"
+  )
+
+  denominator_bad <- set_equilibrium(get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = FALSE
+  )), 5)
+  denominator_bad$Q0 <- 0
+  expect_error(
+    native_equilibrium_total_M(denominator_bad, 5),
+    "denominator"
+  )
+})
+
+test_that("native_total_M EIP sensitivity matches native equations", {
+  init_EIR <- 6
+  for (nEIP in c(1L, 3L, 8L)) {
+    parameters <- get_parameters(list(
+      native_mosquito_backend = TRUE,
+      individual_mosquitoes = FALSE
+    ))
+    parameters$native_mosquito_nEIP <- nEIP
+    parameters <- set_equilibrium(parameters, init_EIR, native_total_M = TRUE)
+
+    expect_equal(parameters$total_M, native_test_expected_total_M(parameters, init_EIR), tolerance = 1e-8)
+
+    metrics <- native_test_equilibrium_metrics(parameters)
+    expect_equal(metrics$adult_female, parameters$total_M, tolerance = 1e-6)
+    expect_equal(metrics$infectious_fraction, native_test_expected_rho(parameters), tolerance = 1e-8)
+    expect_equal(metrics$annual_eir, init_EIR, tolerance = 1e-6)
+    expect_equal(metrics$final_totals, metrics$initial_totals, tolerance = 1e-5)
+  }
+})
+
+test_that("native_total_M zero init_EIR stops before dividing by zero", {
+  parameters <- get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = FALSE
+  ))
+  expect_error(
+    set_equilibrium(parameters, 0, native_total_M = TRUE),
+    "does not support init_EIR = 0"
+  )
+})
+
+test_that("set_equilibrium preserves legacy total_M by default", {
+  init_EIR <- 5
+  parameters <- get_parameters(list(
+    native_mosquito_backend = TRUE,
+    individual_mosquitoes = FALSE
+  ))
+  parameters <- set_equilibrium(parameters, init_EIR)
+
+  expect_null(parameters$native_total_M_equilibrium)
+  expect_equal(parameters$total_M, equilibrium_total_M(parameters, init_EIR), tolerance = 1e-8)
 })
 
 test_that("native stochastic mosquito backend parameterises and steps", {

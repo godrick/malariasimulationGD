@@ -4,7 +4,7 @@
 \alias{set_equilibrium}
 \title{Set equilibrium}
 \usage{
-set_equilibrium(parameters, init_EIR, eq_params = NULL)
+set_equilibrium(parameters, init_EIR, eq_params = NULL, native_total_M = FALSE)
 }
 \arguments{
 \item{parameters}{model parameters to update}
@@ -14,6 +14,10 @@ population)}
 
 \item{eq_params}{parameters from the malariaEquilibrium package, if null.
 The default malariaEquilibrium parameters will be used}
+
+\item{native_total_M}{if TRUE, and the native mosquito backend is enabled,
+calculate total_M from the native all-wild-type mosquito equations instead
+of the legacy mosquito equilibrium approximation}
 }
 \description{
 This will update the IBM parameters to match the

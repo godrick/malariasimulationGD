@@ -483,6 +483,23 @@ native_warn_equilibrium_fallback <- function(message) {
   invisible(NULL)
 }
 
+native_equilibrium_fallback <- function(parameters, message) {
+  if (isTRUE(parameters$native_total_M_equilibrium)) {
+    stop(message, call. = FALSE)
+  }
+  native_warn_equilibrium_fallback(message)
+  list(valid = FALSE)
+}
+
+native_stop_total_M_fallback <- function(parameters) {
+  if (isTRUE(parameters$native_total_M_equilibrium)) {
+    stop(
+      "native_total_M equilibrium requires exact native all-wild-type initialization; legacy fallback is not allowed.",
+      call. = FALSE
+    )
+  }
+}
+
 native_carrying_capacity_scale <- function(parameters, species_i, timestep = 0L) {
   scale <- 1
   if (isTRUE(parameters$carrying_capacity) &&
@@ -533,14 +550,14 @@ native_exact_equilibrium_node <- function(parameters, species_i, cube_info, time
   expected_birth <- rep(0, G)
   expected_birth[[wt]] <- 1
   if (!isTRUE(all.equal(birth_weights, expected_birth, tolerance = 1e-10))) {
-    native_warn_equilibrium_fallback(
+    return(native_equilibrium_fallback(
+      parameters,
       paste(
         "Native mosquito equilibrium fallback:",
         "wild-type self-cross does not produce only wild-type offspring,",
         "so the backend is using the legacy approximate initialization."
       )
-    )
-    return(list(valid = FALSE))
+    ))
   }
 
   omega <- cube_omega_vector(parameters$cube, G, gids)
@@ -556,10 +573,10 @@ native_exact_equilibrium_node <- function(parameters, species_i, cube_info, time
   if (!is.finite(muF_eff) || muF_eff <= 0 ||
       !is.finite(muM_eff) || muM_eff <= 0 ||
       phi[[wt]] <= 0 || xiF[[wt]] <= 0 || xiM[[wt]] <= 0) {
-    native_warn_equilibrium_fallback(
+    return(native_equilibrium_fallback(
+      parameters,
       "Native mosquito equilibrium fallback: invalid wild-type adult traits for exact initialization."
-    )
-    return(list(valid = FALSE))
+    ))
   }
 
   rE <- cfg$nE / parameters$del
@@ -567,10 +584,10 @@ native_exact_equilibrium_node <- function(parameters, species_i, cube_info, time
   rP <- cfg$nP / parameters$dpl
   rEIP <- cfg$nEIP / parameters$dem
   if (!all(is.finite(c(rE, rL, rP))) || any(c(rE, rL, rP) <= 0)) {
-    native_warn_equilibrium_fallback(
+    return(native_equilibrium_fallback(
+      parameters,
       "Native mosquito equilibrium fallback: invalid native stage progression rates."
-    )
-    return(list(valid = FALSE))
+    ))
   }
 
   beta_eff <- eggs_laid(
@@ -592,10 +609,10 @@ native_exact_equilibrium_node <- function(parameters, species_i, cube_info, time
   larv_last <- (parameters$mup + rP) * pup_1 / rL
   dd_rate <- (rE * egg_last * rL^(cfg$nL - 1L) / larv_last)^(1 / cfg$nL) - rL
   if (!is.finite(dd_rate) || dd_rate <= parameters$ml) {
-    native_warn_equilibrium_fallback(
+    return(native_equilibrium_fallback(
+      parameters,
       "Native mosquito equilibrium fallback: failed to derive a positive density-dependent equilibrium."
-    )
-    return(list(valid = FALSE))
+    ))
   }
   aL <- rL / (dd_rate + rL)
   larv_1 <- rE * egg_last / (dd_rate + rL)
@@ -603,10 +620,10 @@ native_exact_equilibrium_node <- function(parameters, species_i, cube_info, time
   K_eff <- sum(larv) / (dd_rate / parameters$ml - 1)
   scale_t0 <- native_carrying_capacity_scale(parameters, species_i, timestep)
   if (!is.finite(K_eff) || K_eff <= 0 || !is.finite(scale_t0) || scale_t0 <= 0) {
-    native_warn_equilibrium_fallback(
+    return(native_equilibrium_fallback(
+      parameters,
       "Native mosquito equilibrium fallback: failed to derive a valid carrying capacity."
-    )
-    return(list(valid = FALSE))
+    ))
   }
 
   lambda <- c_vec[[wt]] * parameters$init_foim
@@ -641,6 +658,7 @@ native_effective_carrying_capacity <- function(parameters, species_i, timestep) 
   if (isTRUE(eq$valid)) {
     k0 <- eq$k0
   } else {
+    native_stop_total_M_fallback(parameters)
     p <- parameters$species_proportions[[species_i]]
     m <- p * parameters$total_M
     k0 <- calculate_carrying_capacity(parameters, m, species_i)
@@ -674,6 +692,7 @@ native_prepare_carrying_capacity_node <- function(parameters, species_i, cube_in
   if (isTRUE(eq$valid)) {
     k0 <- eq$k0
   } else {
+    native_stop_total_M_fallback(parameters)
     p <- parameters$species_proportions[[species_i]]
     m <- p * parameters$total_M
     k0 <- calculate_carrying_capacity(parameters, m, species_i)
@@ -762,6 +781,7 @@ native_initial_state <- function(parameters, species_i, cube_info, index) {
       }
       state[index$fem_ix[wt, wt, i_stage, node]] <- eq$female_I
     } else {
+      native_stop_total_M_fallback(parameters[[node]])
       init_counts <- initial_mosquito_counts(
         parameters[[node]],
         species_i,

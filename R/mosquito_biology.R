@@ -134,6 +134,99 @@ equilibrium_total_M <- function(parameters, EIR) {
   )
 }
 
+native_equilibrium_total_M <- function(parameters, EIR) {
+  if (length(EIR) != 1L || !is.finite(EIR) || EIR < 0) {
+    stop("init_EIR must be a finite, non-negative scalar.", call. = FALSE)
+  }
+  if (EIR == 0) {
+    return(0)
+  }
+  if (length(parameters$init_foim) != 1L ||
+      !is.finite(parameters$init_foim) ||
+      parameters$init_foim <= 0) {
+    stop("init_foim must be > 0 to calculate a non-zero native equilibrium total_M.", call. = FALSE)
+  }
+
+  cube_info <- cube_genotype_info(parameters$cube)
+  G <- cube_info$G
+  wt <- cube_info$wild_type_index
+  gids <- cube_info$genotypesID
+
+  B_mat <- native_build_birth_matrix(parameters$cube, cube_info)
+  wt_pair <- wt + (wt - 1L) * G
+  birth_weights <- as.numeric(B_mat[wt_pair, ])
+  expected_birth <- rep(0, G)
+  expected_birth[[wt]] <- 1
+  if (!isTRUE(all.equal(birth_weights, expected_birth, tolerance = 1e-10))) {
+    stop(
+      "native_total_M requires wild-type self-cross to produce only wild-type offspring.",
+      call. = FALSE
+    )
+  }
+
+  omega <- cube_omega_vector(parameters$cube, G, gids)
+  if (!isTRUE(all.equal(omega[[wt]], 1, tolerance = 1e-8))) {
+    stop(
+      "native_total_M requires omega_WT to be normalized to 1.",
+      call. = FALSE
+    )
+  }
+
+  c_vec <- native_align_cube_vec(if (is.null(parameters$cube)) NULL else parameters$cube$c, gids, 1)
+  if (length(c_vec) != G || any(!is.finite(c_vec)) || any(c_vec < 0)) {
+    stop("native_total_M requires finite, non-negative cube$c values.", call. = FALSE)
+  }
+  c_wt <- c_vec[[wt]]
+  if (c_wt <= 0) {
+    stop("native_total_M requires c_WT > 0 when init_EIR is positive.", call. = FALSE)
+  }
+
+  cfg <- native_mosquito_stage_config(parameters)
+  if (length(cfg$nEIP) != 1L || !is.finite(cfg$nEIP) || cfg$nEIP < 0L) {
+    stop("native_total_M requires native_mosquito_nEIP to be non-negative.", call. = FALSE)
+  }
+  nEIP <- as.integer(cfg$nEIP)
+  if (nEIP > 0L &&
+      (length(parameters$dem) != 1L || !is.finite(parameters$dem) || parameters$dem <= 0)) {
+    stop("native_total_M requires dem > 0 when native_mosquito_nEIP is positive.", call. = FALSE)
+  }
+
+  species <- parameters$species
+  n_species <- length(species)
+  species_proportions <- as.numeric(parameters$species_proportions)
+  if (length(species_proportions) != n_species ||
+      any(!is.finite(species_proportions)) ||
+      any(species_proportions < 0) ||
+      sum(species_proportions) <= 0) {
+    stop("native_total_M requires finite, non-negative species proportions with positive total.", call. = FALSE)
+  }
+
+  lambda <- c_wt * parameters$init_foim
+  denominator <- sum(vnapply(seq_len(n_species), function(species_i) {
+    traits <- equilibrium_species_traits(parameters, species_i)
+    muF <- traits$muF
+    a <- traits$a
+    if (length(muF) != 1L || !is.finite(muF) || muF <= 0 ||
+        length(a) != 1L || !is.finite(a) || a <= 0) {
+      return(NaN)
+    }
+
+    survival <- if (nEIP > 0L) {
+      rEIP <- nEIP / parameters$dem
+      (rEIP / (rEIP + muF))^nEIP
+    } else {
+      1
+    }
+    rho <- lambda / (lambda + muF) * survival
+    species_proportions[[species_i]] * a * rho
+  }))
+  if (!is.finite(denominator) || denominator <= 0) {
+    stop("native_total_M denominator must be finite and positive.", call. = FALSE)
+  }
+
+  EIR * parameters$human_population / 365 / denominator
+}
+
 equilibrium_bednet_background <- function(parameters) {
   if (!isTRUE(parameters$bednets) ||
       isTRUE(parameters$spraying) ||
