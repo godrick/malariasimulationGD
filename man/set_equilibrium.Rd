@@ -9,8 +9,8 @@ set_equilibrium(parameters, init_EIR, eq_params = NULL, native_total_M = FALSE)
 \arguments{
 \item{parameters}{model parameters to update}
 
-\item{init_EIR}{the desired initial EIR (infectious bites per person per day over the entire human
-population)}
+\item{init_EIR}{the desired initial annual EIR (infectious bites per person
+per year)}
 
 \item{eq_params}{parameters from the malariaEquilibrium package, if null.
 The default malariaEquilibrium parameters will be used}
