@@ -38,3 +38,7 @@ test-scripts/seven_node_example/output/careful/*
 test-scripts/*.csv
 test-scripts/**/*.csv
 
+test-scripts/one_node_example/output/quick/one_node_quick_summary.png
+test-scripts/one_node_example/output/quick/incidence_over_time.png
+test-scripts/one_node_example/output/quick/child_prevalence_over_time.png
+test-scripts/one_node_example/output/quick/adult_drive_carrier_frequency.png
