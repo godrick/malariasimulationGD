@@ -255,8 +255,8 @@ remove_unused_equilibrium <- function(params) {
 #' equilibrium parameters and set up the initial human and mosquito population
 #' to achieve init_EIR
 #' @param parameters model parameters to update
-#' @param init_EIR the desired initial EIR (infectious bites per person per day over the entire human
-#' population)
+#' @param init_EIR the desired initial annual EIR (infectious bites per person
+#' per year)
 #' @param eq_params parameters from the malariaEquilibrium package, if null.
 #' The default malariaEquilibrium parameters will be used
 #' @param native_total_M if TRUE, and the native mosquito backend is enabled,
