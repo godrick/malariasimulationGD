@@ -103,9 +103,10 @@
 run_simulation <- function(
     timesteps,
     parameters = NULL,
-    correlations = NULL
+    correlations = NULL,
+    render_output = TRUE
 ) {
-  run_resumable_simulation(timesteps, parameters, correlations)$data
+  run_resumable_simulation(timesteps, parameters, correlations, render_output = render_output)$data
 }
 
 #' @title Run the simulation in a resumable way
@@ -118,6 +119,8 @@ run_simulation <- function(
 #' @param correlations correlation parameters
 #' @param initial_state the state from which the simulation is resumed
 #' @param restore_random_state if TRUE, restore the random number generator's state from the checkpoint.
+#' @param render_output if FALSE, skip output rendering/data-frame materialization
+#'   and run in a state-only mode suitable for checkpoint burn-in.
 #' @return a list with `data` (dataframe of results) and `state` (final simulation state).
 #' When `parameters$cube` is provided in hybrid mosquito mode, an additional
 #' `mosquito_genotypes` entry is returned containing per-timestep female and male
@@ -132,7 +135,8 @@ run_resumable_simulation <- function(
     parameters = NULL,
     correlations = NULL,
     initial_state = NULL,
-    restore_random_state = FALSE
+    restore_random_state = FALSE,
+    render_output = TRUE
 ) {
   random_seed(ceiling(runif(1) * .Machine$integer.max))
   if (is.null(parameters)) {
@@ -156,7 +160,8 @@ run_resumable_simulation <- function(
       stationary_initialization_context
     )
   }
-  if ((parameters$individual_mosquitoes || native_mosquito_backend_enabled(parameters)) &&
+  if (isTRUE(render_output) &&
+      (parameters$individual_mosquitoes || native_mosquito_backend_enabled(parameters)) &&
       !is.null(parameters$cube)) {
     cube_info <- cube_genotype_info(parameters$cube)
     parameters$mosquito_genotype_history <- new.env(parent = emptyenv())
@@ -211,8 +216,14 @@ run_resumable_simulation <- function(
   }
   events <- create_events(parameters)
   initialise_events(events, variables, parameters)
-  renderer <- individual::Render$new(timesteps)
-  populate_incidence_rendering_columns(renderer, parameters)
+  renderer <- if (isTRUE(render_output)) {
+    individual::Render$new(timesteps)
+  } else {
+    NullRender$new(timesteps)
+  }
+  if (isTRUE(render_output)) {
+    populate_incidence_rendering_columns(renderer, parameters)
+  }
   attach_event_listeners(
     events,
     variables,
@@ -266,7 +277,8 @@ run_resumable_simulation <- function(
       lagged_eir = lagged_eir,
       lagged_infectivity = lagged_infectivity,
       timesteps = timesteps,
-      lagged_transmission_eir = lagged_transmission_eir
+      lagged_transmission_eir = lagged_transmission_eir,
+      enable_rendering = render_output
     ),
     variables = variables,
     events = events,
@@ -281,7 +293,7 @@ run_resumable_simulation <- function(
     malariasimulationGD = individual::save_object_state(stateful_objects)
   )
 
-  data <- renderer$to_dataframe()
+  data <- if (isTRUE(render_output)) renderer$to_dataframe() else NULL
   genotype_outputs <- NULL
   aquatic_genotype_outputs <- NULL
   infectious_genotype_counts_output <- parameters$mosquito_infectious_genotype_history
@@ -301,7 +313,7 @@ run_resumable_simulation <- function(
       P = parameters$mosquito_aquatic_genotype_history$P
     )
   }
-  if (!is.null(initial_state)) {
+  if (isTRUE(render_output) && !is.null(initial_state)) {
     # Drop the timesteps we didn't simulate from the data.
     # It would just be full of NA.
     data <- data[-(1:initial_state$timesteps),]
@@ -333,21 +345,21 @@ run_resumable_simulation <- function(
       ]
     }
   }
-  if (!is.null(genotype_outputs)) {
+  if (isTRUE(render_output) && !is.null(genotype_outputs)) {
     attr(data, "mosquito_genotype_counts_female") <- genotype_outputs$female
     attr(data, "mosquito_genotype_counts_male") <- genotype_outputs$male
     attr(data, "mosquito_genotype_V") <- genotype_outputs$V
     attr(data, "mosquito_genotype_total_adults") <- genotype_outputs$total_adults
   }
-  if (!is.null(aquatic_genotype_outputs)) {
+  if (isTRUE(render_output) && !is.null(aquatic_genotype_outputs)) {
     attr(data, "mosquito_aquatic_genotype_E") <- aquatic_genotype_outputs$E
     attr(data, "mosquito_aquatic_genotype_L") <- aquatic_genotype_outputs$L
     attr(data, "mosquito_aquatic_genotype_P") <- aquatic_genotype_outputs$P
   }
-  if (!is.null(infectious_genotype_counts_output)) {
+  if (isTRUE(render_output) && !is.null(infectious_genotype_counts_output)) {
     attr(data, "mosquito_infectious_genotype_counts") <- infectious_genotype_counts_output
   }
-  if (!is.null(release_schedule_output)) {
+  if (isTRUE(render_output) && !is.null(release_schedule_output)) {
     if (nrow(release_schedule_output) > 0 && "timestep" %in% names(data)) {
       for (sp in unique(release_schedule_output$species)) {
         col <- paste0("n_released_", sp)

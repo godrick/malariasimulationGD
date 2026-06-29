@@ -920,6 +920,34 @@ native_extract_summary <- function(state, model, node = model$node) {
   )
 }
 
+native_summary_cache_clear <- function(shared) {
+  if (!is.null(shared$summary_cache)) {
+    rm(list = ls(envir = shared$summary_cache, all.names = TRUE), envir = shared$summary_cache)
+  }
+  invisible(NULL)
+}
+
+native_summary_cache_key <- function(model, node) {
+  paste(model$species_i, as.integer(node), sep = ":")
+}
+
+native_extract_summary_cached <- function(model, node = model$node) {
+  shared <- model$shared
+  if (is.null(shared$summary_cache)) {
+    shared$summary_cache <- new.env(parent = emptyenv())
+  }
+
+  key <- native_summary_cache_key(model, node)
+  cached <- shared$summary_cache[[key]]
+  if (!is.null(cached)) {
+    return(cached)
+  }
+
+  summary <- native_extract_summary(native_shared_state(shared), model, node = node)
+  shared$summary_cache[[key]] <- summary
+  summary
+}
+
 native_solver_compat_states <- function(state, model, stochastic) {
   summary <- native_extract_summary(state, model)
   if (!stochastic) {
@@ -1015,6 +1043,7 @@ native_set_shared_state <- function(shared, state, t = shared$t) {
     solver_set_states(shared$solver_ptr, t, state)
   }
   shared$t <- t
+  native_summary_cache_clear(shared)
   invisible(NULL)
 }
 
@@ -1060,6 +1089,7 @@ native_execute_shared_step <- function(shared) {
   shared$t <- shared$t + 1
   shared$last_completed_timestep <- pending$timestep
   shared$pending_inputs <- native_empty_pending_inputs(shared$n_nodes)
+  native_summary_cache_clear(shared)
   invisible(NULL)
 }
 
@@ -1128,7 +1158,7 @@ NativeMosquitoSolver <- R6::R6Class(
       )
     },
     get_summary = function(node = self$model$node) {
-      native_extract_summary(self$get_native_state(), self$model, node = node)
+      native_extract_summary_cached(self$model, node = node)
     },
     apply_release = function(sex, genotype_idx, count, timestep, node = self$model$node) {
       state <- native_apply_release_to_state(
@@ -1460,6 +1490,7 @@ native_build_shared_backend <- function(parameters, species_i, timesteps) {
   shared$t <- 0
   shared$last_completed_timestep <- NULL
   shared$pending_inputs <- native_empty_pending_inputs(n_nodes)
+  shared$summary_cache <- new.env(parent = emptyenv())
 
   models <- lapply(
     seq_len(n_nodes),

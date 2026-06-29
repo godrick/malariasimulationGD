@@ -2,9 +2,30 @@ HumanInfectivityLagBuffer <- R6::R6Class(
   "HumanInfectivityLagBuffer",
   private = list(
     max_rows = NULL,
+    n_rows = 0L,
+    next_row = 1L,
     default_infectivity = NULL,
     timesteps = numeric(0),
     infectivity = NULL,
+
+    ordered_rows = function() {
+      if (private$n_rows == 0L) {
+        return(integer(0))
+      }
+      if (private$n_rows < private$max_rows) {
+        return(seq_len(private$n_rows))
+      }
+      c(seq.int(private$next_row, private$max_rows), seq_len(private$next_row - 1L))
+    },
+
+    ordered_timesteps = function() {
+      private$timesteps[private$ordered_rows()]
+    },
+
+    ordered_infectivity = function() {
+      rows <- private$ordered_rows()
+      private$infectivity[rows, , drop = FALSE]
+    },
 
     check_values = function(values, label) {
       values <- as.numeric(values)
@@ -33,52 +54,57 @@ HumanInfectivityLagBuffer <- R6::R6Class(
       }
 
       private$max_rows <- max_rows
+      private$n_rows <- 0L
+      private$next_row <- 1L
       private$default_infectivity <- default_infectivity
-      private$infectivity <- matrix(numeric(0), nrow = 0L, ncol = length(default_infectivity))
+      private$timesteps <- rep(NA_real_, max_rows)
+      private$infectivity <- matrix(0, nrow = max_rows, ncol = length(default_infectivity))
     },
 
     save = function(timestep, infectivity) {
       infectivity <- private$check_values(infectivity, "infectivity")
 
-      existing <- which(private$timesteps == timestep)
+      rows <- private$ordered_rows()
+      existing <- which(private$timesteps[rows] == timestep)
       if (length(existing) > 0L) {
-        private$infectivity[existing[[1L]], ] <- infectivity
+        private$infectivity[rows[[existing[[1L]]]], ] <- infectivity
         return(invisible(NULL))
       }
 
-      private$timesteps <- c(private$timesteps, as.numeric(timestep))
-      private$infectivity <- rbind(private$infectivity, infectivity)
-
-      if (length(private$timesteps) > private$max_rows) {
-        keep <- seq.int(length(private$timesteps) - private$max_rows + 1L, length(private$timesteps))
-        private$timesteps <- private$timesteps[keep]
-        private$infectivity <- private$infectivity[keep, , drop = FALSE]
+      row <- private$next_row
+      private$timesteps[[row]] <- as.numeric(timestep)
+      private$infectivity[row, ] <- infectivity
+      if (private$n_rows < private$max_rows) {
+        private$n_rows <- private$n_rows + 1L
       }
+      private$next_row <- if (row == private$max_rows) 1L else row + 1L
 
       invisible(NULL)
     },
 
     get = function(timestep) {
-      if (length(private$timesteps) == 0L || timestep < private$timesteps[[1L]]) {
+      timesteps <- private$ordered_timesteps()
+      if (length(timesteps) == 0L || timestep < timesteps[[1L]]) {
         return(private$default_infectivity)
       }
 
-      exact <- which(private$timesteps == timestep)
+      history <- private$ordered_infectivity()
+      exact <- which(timesteps == timestep)
       if (length(exact) > 0L) {
-        return(as.numeric(private$infectivity[exact[[1L]], ]))
+        return(as.numeric(history[exact[[1L]], ]))
       }
 
-      if (timestep > private$timesteps[[length(private$timesteps)]]) {
+      if (timestep > timesteps[[length(timesteps)]]) {
         warning("Infectivity lag lookup is after the latest saved timestep; returning per-human defaults.", call. = FALSE)
         return(private$default_infectivity)
       }
 
-      after <- which(private$timesteps > timestep)[[1L]]
+      after <- which(timesteps > timestep)[[1L]]
       before <- after - 1L
-      weight <- (timestep - private$timesteps[[before]]) /
-        (private$timesteps[[after]] - private$timesteps[[before]])
+      weight <- (timestep - timesteps[[before]]) /
+        (timesteps[[after]] - timesteps[[before]])
 
-      as.numeric(private$infectivity[before, ] + weight * (private$infectivity[after, ] - private$infectivity[before, ]))
+      as.numeric(history[before, ] + weight * (history[after, ] - history[before, ]))
     },
 
     clear = function(target) {
@@ -88,16 +114,17 @@ HumanInfectivityLagBuffer <- R6::R6Class(
       }
 
       private$default_infectivity[index] <- 0
-      if (nrow(private$infectivity) > 0L) {
-        private$infectivity[, index] <- 0
+      rows <- private$ordered_rows()
+      if (length(rows) > 0L) {
+        private$infectivity[rows, index] <- 0
       }
       invisible(NULL)
     },
 
     save_state = function() {
       list(
-        timesteps = private$timesteps,
-        infectivity = private$infectivity,
+        timesteps = private$ordered_timesteps(),
+        infectivity = private$ordered_infectivity(),
         default_infectivity = private$default_infectivity
       )
     },
@@ -106,8 +133,22 @@ HumanInfectivityLagBuffer <- R6::R6Class(
       if (is.null(state)) {
         return(invisible(NULL))
       }
-      private$timesteps <- as.numeric(state$timesteps)
-      private$infectivity <- as.matrix(state$infectivity)
+      timesteps <- as.numeric(state$timesteps)
+      infectivity <- as.matrix(state$infectivity)
+      n <- min(length(timesteps), private$max_rows)
+      if (n > 0L && length(timesteps) > n) {
+        keep <- seq.int(length(timesteps) - n + 1L, length(timesteps))
+        timesteps <- timesteps[keep]
+        infectivity <- infectivity[keep, , drop = FALSE]
+      }
+      private$timesteps <- rep(NA_real_, private$max_rows)
+      private$infectivity <- matrix(0, nrow = private$max_rows, ncol = length(private$default_infectivity))
+      private$n_rows <- n
+      private$next_row <- if (n == private$max_rows) 1L else n + 1L
+      if (n > 0L) {
+        private$timesteps[seq_len(n)] <- timesteps
+        private$infectivity[seq_len(n), ] <- infectivity
+      }
       private$default_infectivity <- as.numeric(state$default_infectivity)
       invisible(NULL)
     }

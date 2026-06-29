@@ -2,6 +2,8 @@ HumanExposureLagBuffer <- R6::R6Class(
   "HumanExposureLagBuffer",
   private = list(
     max_rows = NULL,
+    n_rows = 0L,
+    next_row = 1L,
     default_exposure = NULL,
     default_weighted_exposure = NULL,
     timesteps = numeric(0),
@@ -11,6 +13,34 @@ HumanExposureLagBuffer <- R6::R6Class(
     default_species_weighted_exposure = NULL,
     species_exposure = NULL,
     species_weighted_exposure = NULL,
+
+    ordered_rows = function() {
+      if (private$n_rows == 0L) {
+        return(integer(0))
+      }
+      if (private$n_rows < private$max_rows) {
+        return(seq_len(private$n_rows))
+      }
+      c(seq.int(private$next_row, private$max_rows), seq_len(private$next_row - 1L))
+    },
+
+    ordered_timesteps = function() {
+      private$timesteps[private$ordered_rows()]
+    },
+
+    ordered_matrix = function(values) {
+      if (is.null(values)) {
+        return(NULL)
+      }
+      values[private$ordered_rows(), , drop = FALSE]
+    },
+
+    ordered_array = function(values) {
+      if (is.null(values)) {
+        return(NULL)
+      }
+      values[private$ordered_rows(), , , drop = FALSE]
+    },
 
     check_values = function(values, label) {
       values <- as.numeric(values)
@@ -79,8 +109,11 @@ HumanExposureLagBuffer <- R6::R6Class(
       }
 
       private$max_rows <- max_rows
+      private$n_rows <- 0L
+      private$next_row <- 1L
       private$default_exposure <- default_exposure
-      private$exposure <- matrix(numeric(0), nrow = 0L, ncol = length(default_exposure))
+      private$timesteps <- rep(NA_real_, max_rows)
+      private$exposure <- matrix(0, nrow = max_rows, ncol = length(default_exposure))
 
       if (!is.null(default_species_exposure)) {
         default_species_exposure <- as.matrix(default_species_exposure)
@@ -91,8 +124,8 @@ HumanExposureLagBuffer <- R6::R6Class(
         }
         private$default_species_exposure <- default_species_exposure
         private$species_exposure <- array(
-          numeric(0),
-          dim = c(0L, nrow(default_species_exposure), ncol(default_species_exposure))
+          0,
+          dim = c(max_rows, nrow(default_species_exposure), ncol(default_species_exposure))
         )
       }
 
@@ -103,7 +136,7 @@ HumanExposureLagBuffer <- R6::R6Class(
           stop("default_weighted_exposure must be a finite numeric vector matching default_exposure.", call. = FALSE)
         }
         private$default_weighted_exposure <- default_weighted_exposure
-        private$weighted_exposure <- matrix(numeric(0), nrow = 0L, ncol = length(default_exposure))
+        private$weighted_exposure <- matrix(0, nrow = max_rows, ncol = length(default_exposure))
         if (!is.null(default_species_weighted_exposure)) {
           default_species_weighted_exposure <- as.matrix(default_species_weighted_exposure)
           if (is.null(private$default_species_exposure) ||
@@ -114,7 +147,7 @@ HumanExposureLagBuffer <- R6::R6Class(
           }
           private$default_species_weighted_exposure <- default_species_weighted_exposure
           private$species_weighted_exposure <- array(
-            numeric(0),
+            0,
             dim = dim(private$species_exposure)
           )
         }
@@ -145,9 +178,10 @@ HumanExposureLagBuffer <- R6::R6Class(
         species_weighted_exposure <- private$check_species_values(species_weighted_exposure, "species_weighted_exposure")
       }
 
-      existing <- which(private$timesteps == timestep)
+      rows <- private$ordered_rows()
+      existing <- which(private$timesteps[rows] == timestep)
       if (length(existing) > 0L) {
-        row <- existing[[1L]]
+        row <- rows[[existing[[1L]]]]
         private$exposure[row, ] <- exposure
         if (!is.null(private$weighted_exposure)) {
           private$weighted_exposure[row, ] <- weighted_exposure
@@ -161,93 +195,81 @@ HumanExposureLagBuffer <- R6::R6Class(
         return(invisible(NULL))
       }
 
-      private$timesteps <- c(private$timesteps, as.numeric(timestep))
-      private$exposure <- rbind(private$exposure, exposure)
+      row <- private$next_row
+      private$timesteps[[row]] <- as.numeric(timestep)
+      private$exposure[row, ] <- exposure
       if (!is.null(private$weighted_exposure)) {
-        private$weighted_exposure <- rbind(private$weighted_exposure, weighted_exposure)
+        private$weighted_exposure[row, ] <- weighted_exposure
       }
       if (!is.null(private$species_exposure)) {
-        private$species_exposure <- abind_first_dimension(private$species_exposure, species_exposure)
+        private$species_exposure[row, , ] <- species_exposure
       }
       if (!is.null(private$species_weighted_exposure)) {
-        private$species_weighted_exposure <- abind_first_dimension(
-          private$species_weighted_exposure,
-          species_weighted_exposure
-        )
+        private$species_weighted_exposure[row, , ] <- species_weighted_exposure
       }
-
-      if (length(private$timesteps) > private$max_rows) {
-        keep <- seq.int(length(private$timesteps) - private$max_rows + 1L, length(private$timesteps))
-        private$timesteps <- private$timesteps[keep]
-        private$exposure <- private$exposure[keep, , drop = FALSE]
-        if (!is.null(private$weighted_exposure)) {
-          private$weighted_exposure <- private$weighted_exposure[keep, , drop = FALSE]
-        }
-        if (!is.null(private$species_exposure)) {
-          private$species_exposure <- private$species_exposure[keep, , , drop = FALSE]
-        }
-        if (!is.null(private$species_weighted_exposure)) {
-          private$species_weighted_exposure <- private$species_weighted_exposure[keep, , , drop = FALSE]
-        }
+      if (private$n_rows < private$max_rows) {
+        private$n_rows <- private$n_rows + 1L
       }
+      private$next_row <- if (row == private$max_rows) 1L else row + 1L
 
       invisible(NULL)
     },
 
     get = function(timestep, weighted = FALSE, by_species = FALSE) {
+      timesteps <- private$ordered_timesteps()
       if (isTRUE(by_species)) {
-        history <- private$select_species_history(weighted)
+        history <- private$ordered_array(private$select_species_history(weighted))
         default <- private$select_species_default(weighted)
         if (is.null(history) || is.null(default)) {
           return(NULL)
         }
-        if (length(private$timesteps) == 0L || timestep < private$timesteps[[1L]]) {
+        if (length(timesteps) == 0L || timestep < timesteps[[1L]]) {
           return(default)
         }
 
-        exact <- which(private$timesteps == timestep)
+        exact <- which(timesteps == timestep)
         if (length(exact) > 0L) {
           return(array_row_matrix(history, exact[[1L]]))
         }
 
-        if (timestep > private$timesteps[[length(private$timesteps)]]) {
+        if (timestep > timesteps[[length(timesteps)]]) {
           warning("Exposure lag lookup is after the latest saved timestep; returning per-human defaults.", call. = FALSE)
           return(default)
         }
 
-        after <- which(private$timesteps > timestep)[[1L]]
+        after <- which(timesteps > timestep)[[1L]]
         before <- after - 1L
-        weight <- (timestep - private$timesteps[[before]]) /
-          (private$timesteps[[after]] - private$timesteps[[before]])
+        weight <- (timestep - timesteps[[before]]) /
+          (timesteps[[after]] - timesteps[[before]])
 
         before_values <- array_row_matrix(history, before)
         after_values <- array_row_matrix(history, after)
         return(before_values + weight * (after_values - before_values))
       }
 
-      history <- private$select_history(weighted)
+      history <- private$ordered_matrix(private$select_history(weighted))
       default <- private$select_default(weighted)
       if (is.null(history) || is.null(default)) {
         return(NULL)
       }
-      if (length(private$timesteps) == 0L || timestep < private$timesteps[[1L]]) {
+      if (length(timesteps) == 0L || timestep < timesteps[[1L]]) {
         return(default)
       }
 
-      exact <- which(private$timesteps == timestep)
+      exact <- which(timesteps == timestep)
       if (length(exact) > 0L) {
         return(as.numeric(history[exact[[1L]], ]))
       }
 
-      if (timestep > private$timesteps[[length(private$timesteps)]]) {
+      if (timestep > timesteps[[length(timesteps)]]) {
         warning("Exposure lag lookup is after the latest saved timestep; returning per-human defaults.", call. = FALSE)
         return(default)
       }
 
-      after <- which(private$timesteps > timestep)[[1L]]
+      after <- which(timesteps > timestep)[[1L]]
       before <- after - 1L
-      weight <- (timestep - private$timesteps[[before]]) /
-        (private$timesteps[[after]] - private$timesteps[[before]])
+      weight <- (timestep - timesteps[[before]]) /
+        (timesteps[[after]] - timesteps[[before]])
 
       as.numeric(history[before, ] + weight * (history[after, ] - history[before, ]))
     },
@@ -257,31 +279,32 @@ HumanExposureLagBuffer <- R6::R6Class(
       if (length(index) == 0L) {
         return(invisible(NULL))
       }
-      if (nrow(private$exposure) > 0L) {
-        private$exposure[, index] <- matrix(
+      rows <- private$ordered_rows()
+      if (length(rows) > 0L) {
+        private$exposure[rows, index] <- matrix(
           private$default_exposure[index],
-          nrow = nrow(private$exposure),
+          nrow = length(rows),
           ncol = length(index),
           byrow = TRUE
         )
       }
       if (!is.null(private$weighted_exposure)) {
-        if (nrow(private$weighted_exposure) > 0L) {
-          private$weighted_exposure[, index] <- matrix(
+        if (length(rows) > 0L) {
+          private$weighted_exposure[rows, index] <- matrix(
             private$default_weighted_exposure[index],
-            nrow = nrow(private$weighted_exposure),
+            nrow = length(rows),
             ncol = length(index),
             byrow = TRUE
           )
         }
       }
-      if (!is.null(private$species_exposure) && dim(private$species_exposure)[[1L]] > 0L) {
-        for (row in seq_len(dim(private$species_exposure)[[1L]])) {
+      if (!is.null(private$species_exposure) && length(rows) > 0L) {
+        for (row in rows) {
           private$species_exposure[row, , index] <- private$default_species_exposure[, index, drop = FALSE]
         }
       }
-      if (!is.null(private$species_weighted_exposure) && dim(private$species_weighted_exposure)[[1L]] > 0L) {
-        for (row in seq_len(dim(private$species_weighted_exposure)[[1L]])) {
+      if (!is.null(private$species_weighted_exposure) && length(rows) > 0L) {
+        for (row in rows) {
           private$species_weighted_exposure[row, , index] <- private$default_species_weighted_exposure[, index, drop = FALSE]
         }
       }
@@ -290,13 +313,13 @@ HumanExposureLagBuffer <- R6::R6Class(
 
     save_state = function() {
       list(
-        timesteps = private$timesteps,
-        exposure = private$exposure,
-        weighted_exposure = private$weighted_exposure,
+        timesteps = private$ordered_timesteps(),
+        exposure = private$ordered_matrix(private$exposure),
+        weighted_exposure = private$ordered_matrix(private$weighted_exposure),
         default_exposure = private$default_exposure,
         default_weighted_exposure = private$default_weighted_exposure,
-        species_exposure = private$species_exposure,
-        species_weighted_exposure = private$species_weighted_exposure,
+        species_exposure = private$ordered_array(private$species_exposure),
+        species_weighted_exposure = private$ordered_array(private$species_weighted_exposure),
         default_species_exposure = private$default_species_exposure,
         default_species_weighted_exposure = private$default_species_weighted_exposure
       )
@@ -306,35 +329,80 @@ HumanExposureLagBuffer <- R6::R6Class(
       if (is.null(state)) {
         return(invisible(NULL))
       }
-      private$timesteps <- as.numeric(state$timesteps)
-      private$exposure <- as.matrix(state$exposure)
+      timesteps <- as.numeric(state$timesteps)
+      exposure <- as.matrix(state$exposure)
+      n <- min(length(timesteps), private$max_rows)
+      if (n > 0L && length(timesteps) > n) {
+        keep <- seq.int(length(timesteps) - n + 1L, length(timesteps))
+        timesteps <- timesteps[keep]
+        exposure <- exposure[keep, , drop = FALSE]
+      }
+      private$timesteps <- rep(NA_real_, private$max_rows)
+      private$exposure <- matrix(0, nrow = private$max_rows, ncol = length(private$default_exposure))
+      private$n_rows <- n
+      private$next_row <- if (n == private$max_rows) 1L else n + 1L
+      if (n > 0L) {
+        private$timesteps[seq_len(n)] <- timesteps
+        private$exposure[seq_len(n), ] <- exposure
+      }
       private$default_exposure <- as.numeric(state$default_exposure)
 
       if (!is.null(private$weighted_exposure)) {
-        private$weighted_exposure <- as.matrix(state$weighted_exposure)
+        private$weighted_exposure <- matrix(0, nrow = private$max_rows, ncol = length(private$default_exposure))
+        if (n > 0L) {
+          weighted_exposure <- as.matrix(state$weighted_exposure)
+          if (nrow(weighted_exposure) > n) {
+            weighted_exposure <- weighted_exposure[seq.int(nrow(weighted_exposure) - n + 1L, nrow(weighted_exposure)), , drop = FALSE]
+          }
+          private$weighted_exposure[seq_len(n), ] <- weighted_exposure
+        }
         private$default_weighted_exposure <- as.numeric(state$default_weighted_exposure)
       }
       if (!is.null(state$species_exposure)) {
-        private$species_exposure <- state$species_exposure
+        species_exposure <- state$species_exposure
+        if (dim(species_exposure)[[1L]] > n) {
+          keep <- seq.int(dim(species_exposure)[[1L]] - n + 1L, dim(species_exposure)[[1L]])
+          species_exposure <- species_exposure[keep, , , drop = FALSE]
+        }
         private$default_species_exposure <- as.matrix(state$default_species_exposure)
+        private$species_exposure <- array(
+          0,
+          dim = c(private$max_rows, nrow(private$default_species_exposure), ncol(private$default_species_exposure))
+        )
+        if (n > 0L) {
+          private$species_exposure[seq_len(n), , ] <- species_exposure
+        }
       } else if (!is.null(private$species_exposure) &&
           nrow(private$default_species_exposure) == 1L &&
-          nrow(private$exposure) > 0L) {
+          n > 0L) {
         private$species_exposure <- array(
-          private$exposure,
-          dim = c(nrow(private$exposure), 1L, ncol(private$exposure))
+          0,
+          dim = c(private$max_rows, 1L, ncol(private$exposure))
         )
+        private$species_exposure[seq_len(n), , ] <- private$exposure[seq_len(n), , drop = FALSE]
       }
       if (!is.null(state$species_weighted_exposure)) {
-        private$species_weighted_exposure <- state$species_weighted_exposure
+        species_weighted_exposure <- state$species_weighted_exposure
+        if (dim(species_weighted_exposure)[[1L]] > n) {
+          keep <- seq.int(dim(species_weighted_exposure)[[1L]] - n + 1L, dim(species_weighted_exposure)[[1L]])
+          species_weighted_exposure <- species_weighted_exposure[keep, , , drop = FALSE]
+        }
         private$default_species_weighted_exposure <- as.matrix(state$default_species_weighted_exposure)
+        private$species_weighted_exposure <- array(
+          0,
+          dim = c(private$max_rows, nrow(private$default_species_weighted_exposure), ncol(private$default_species_weighted_exposure))
+        )
+        if (n > 0L) {
+          private$species_weighted_exposure[seq_len(n), , ] <- species_weighted_exposure
+        }
       } else if (!is.null(private$species_weighted_exposure) &&
           nrow(private$default_species_weighted_exposure) == 1L &&
-          nrow(private$weighted_exposure) > 0L) {
+          n > 0L) {
         private$species_weighted_exposure <- array(
-          private$weighted_exposure,
-          dim = c(nrow(private$weighted_exposure), 1L, ncol(private$weighted_exposure))
+          0,
+          dim = c(private$max_rows, 1L, ncol(private$weighted_exposure))
         )
+        private$species_weighted_exposure[seq_len(n), , ] <- private$weighted_exposure[seq_len(n), , drop = FALSE]
       }
       invisible(NULL)
     }

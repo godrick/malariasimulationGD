@@ -9,7 +9,8 @@ run_resumable_simulation(
   parameters = NULL,
   correlations = NULL,
   initial_state = NULL,
-  restore_random_state = FALSE
+  restore_random_state = FALSE,
+  render_output = TRUE
 )
 }
 \arguments{
@@ -22,9 +23,13 @@ run_resumable_simulation(
 \item{initial_state}{the state from which the simulation is resumed}
 
 \item{restore_random_state}{if TRUE, restore the random number generator's state from the checkpoint.}
+
+\item{render_output}{if FALSE, skip output rendering/data-frame materialization
+and run in a state-only mode suitable for checkpoint burn-in.}
 }
 \value{
 a list with \code{data} (dataframe of results) and \code{state} (final simulation state).
+When \code{render_output = FALSE}, \code{data} is \code{NULL}.
 When \code{parameters$cube} is provided in hybrid mosquito mode, an additional
 \code{mosquito_genotypes} entry is returned containing per-timestep female and male
 adult genotype counts and the egg viability fraction \code{V}, and the same arrays
