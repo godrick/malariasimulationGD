@@ -15,6 +15,9 @@
 #   test-scripts/one_node_example/output/quick/context.rds
 # ------------------------------------------------------------------------------
 
+start_time <- Sys.time()
+
+
 args <- commandArgs(FALSE)
 file_arg <- grep("^--file=", args, value = TRUE)
 script_path <- if (length(file_arg) > 0L) {
@@ -49,8 +52,8 @@ source(file.path(example_dir, "config", "homing_drive.R"))
 RNG_SEED <- 20260610L
 human_population <- 1000L
 init_EIR <- 10
-timesteps <- 365*10
-release_day <- 100L
+timesteps <- 365*120
+release_day <- 60*365L
 release_count <- 100L
 release_genotype <- "HH"
 release_sex <- "M"
@@ -223,3 +226,5 @@ low_period <- ts$eir_annual_per_person < threshold_eir &
 rebound_days <- ts$timestep[ts$n_infections > 0 & dplyr::lag(low_period, default = FALSE)]
 
 head(rebound_days)
+
+end_time <- Sys.time()
