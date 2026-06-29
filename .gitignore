@@ -48,3 +48,6 @@ test-scripts/one_node_example/output/baseline/
 *.png
 /test-scripts/one_node_example/output
 /test-scripts
+/test-scripts
+/test-scripts
+/test-scripts
