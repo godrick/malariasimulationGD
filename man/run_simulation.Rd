@@ -4,12 +4,7 @@
 \alias{run_simulation}
 \title{Run the simulation}
 \usage{
-run_simulation(
-  timesteps,
-  parameters = NULL,
-  correlations = NULL,
-  render_output = TRUE
-)
+run_simulation(timesteps, parameters = NULL, correlations = NULL)
 }
 \arguments{
 \item{timesteps}{the number of timesteps to run the simulation for (in days)}
@@ -17,12 +12,9 @@ run_simulation(
 \item{parameters}{a named list of parameters to use}
 
 \item{correlations}{correlation parameters}
-
-\item{render_output}{if FALSE, skip output rendering/data-frame
-materialization and run in a state-only mode suitable for checkpoint burn-in.}
 }
 \value{
-dataframe of results, or NULL when \code{render_output = FALSE}
+dataframe of results
 }
 \description{
 Run the simulation for some time given some parameters. This currently

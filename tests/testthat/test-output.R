@@ -39,27 +39,3 @@ test_that("run_simulation works with default parameters", {
   expect_equal(nrow(sim), 2)
   expect_true(all(c("timestep", "EIR_gamb", "FOIM_gamb") %in% names(sim)))
 })
-
-test_that("single-node simulations can skip output rendering", {
-  parameters <- get_parameters(list(
-    human_population = 10,
-    individual_mosquitoes = FALSE,
-    progress_bar = FALSE
-  ))
-
-  sim <- run_simulation(
-    timesteps = 2,
-    parameters = parameters,
-    render_output = FALSE
-  )
-  resumable <- run_resumable_simulation(
-    timesteps = 2,
-    parameters = parameters,
-    render_output = FALSE
-  )
-
-  expect_null(sim)
-  expect_null(resumable$data)
-  expect_named(resumable, c("data", "state"))
-  expect_equal(resumable$state$timesteps, 2)
-})
