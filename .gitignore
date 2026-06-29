@@ -43,7 +43,11 @@ test-scripts/one_node_example/output/quick/incidence_over_time.png
 test-scripts/one_node_example/output/quick/child_prevalence_over_time.png
 test-scripts/one_node_example/output/quick/adult_drive_carrier_frequency.png
 test-scripts/one_node_example/output/quick/child_prevalence_over_time.png
-test-scripts/one_node_example/output/baseline/*.png
-
+test-scripts/one_node_example/output/baseline/
+*.png
+*.png
 /test-scripts/one_node_example/output
-/test-scripts/one_node_example
+/test-scripts
+/test-scripts
+/test-scripts
+/test-scripts
