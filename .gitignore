@@ -38,3 +38,4 @@ test-scripts/seven_node_example/output/careful/*
 test-scripts/*.csv
 test-scripts/**/*.csv
 /test-scripts/one_node_example/output
+/docs
