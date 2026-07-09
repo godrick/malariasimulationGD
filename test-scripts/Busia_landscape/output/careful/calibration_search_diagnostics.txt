@@ -1,0 +1,11 @@
+Busia calibration search diagnostics
+Target PfPR2-10 microscopy: 0.390
+Explored init_EIR range: 0.795789 to 9.549470
+Realised PfPR range: 0.195052 to 0.515021
+Target bracketed by tested simulations: TRUE
+Candidate below target: init_EIR=1.821902, PfPR=0.284577
+Candidate above target: init_EIR=4.171115, PfPR=0.390635
+Spearman cor(log(init_EIR), realised PfPR): 0.900000
+Adjacent monotonicity violations > 0.050: 0
+Maximum adjacent decline: 0.004598
+Approximately non-decreasing: TRUE
