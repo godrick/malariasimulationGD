@@ -26,6 +26,19 @@ Rscript test-scripts/one_node_example/quick/00_run_quick.R
 Rscript test-scripts/one_node_example/quick/01_plot_quick.R
 ```
 
+To compare the legacy and native wild-type-only EIR-to-realised-PfPR2-10
+mapping across a configurable EIR grid, run:
+
+```sh
+Rscript test-scripts/one_node_example/baseline/02_compare_eir_pfpr_mapping.R
+```
+
+This writes per-seed and summary CSV files plus
+`legacy_native_eir_pfpr_mapping.png` under
+`test-scripts/one_node_example/output/baseline/eir_pfpr_mapping/`. The native
+model uses a singleton `WW` genotype cube; the legacy model is the aggregate
+wild-type baseline.
+
 The run script loads the working-tree package with `pkgload::load_all()` when
 available, then builds a one-node native backend parameter set using
 `set_equilibrium(..., native_total_M = TRUE)`.
@@ -92,6 +105,8 @@ The plotting script writes:
 ```text
 one_node_example/
   config/homing_drive.R  one-node homing-drive cube and fitness-cost helper
+  baseline/              no-release native diagnostics and legacy comparisons
   quick/                 runnable quick simulation and plotting scripts
+  output/baseline/       baseline comparison tables and figures
   output/quick/          generated CSVs, RDS context, and figures
 ```
