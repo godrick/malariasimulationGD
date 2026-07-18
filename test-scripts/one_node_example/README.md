@@ -34,10 +34,13 @@ Rscript test-scripts/one_node_example/baseline/02_compare_eir_pfpr_mapping.R
 ```
 
 This writes per-seed and summary CSV files plus
-`legacy_native_eir_pfpr_mapping.png` under
+`legacy_native_eir_pfpr_mapping.png` and
+`legacy_native_configured_vs_realised_eir.png` under
 `test-scripts/one_node_example/output/baseline/eir_pfpr_mapping/`. The native
 model uses a singleton `WW` genotype cube; the legacy model is the aggregate
-wild-type baseline.
+wild-type baseline. Both backends use persistent 45% AL clinical-treatment
+coverage and the regional age demography in
+`config/age_structure_summary.csv`.
 
 The run script loads the working-tree package with `pkgload::load_all()` when
 available, then builds a one-node native backend parameter set using
