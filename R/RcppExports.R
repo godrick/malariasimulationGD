@@ -125,6 +125,10 @@ solver_step <- function(solver) {
     invisible(.Call(`_malariasimulationGD_solver_step`, solver))
 }
 
+stoch_ento_step_native <- function(state_r, t, dt_stoch, dt_out, nNodes, nG, nE, nL, nP, egg_ix_r, larv_ix_r, pup_ix_r, male_ix_r, unm_ix_r, fem_ix_r, rE, rL, rP, muE_r, muL_r, muP_r, muM_r, muF_r, log_dd, K_r, gamma_dd_r, beta_vec_r, nu, omega_inv_r, phi_r, xiF_r, xiM_r, eta_r, B_mat_r, has_move, move_probs_r, move_rates_r, muM_node_base_r, muF_node_base_r, tol) {
+    .Call(`_malariasimulationGD_stoch_ento_step_native`, state_r, t, dt_stoch, dt_out, nNodes, nG, nE, nL, nP, egg_ix_r, larv_ix_r, pup_ix_r, male_ix_r, unm_ix_r, fem_ix_r, rE, rL, rP, muE_r, muL_r, muP_r, muM_r, muF_r, log_dd, K_r, gamma_dd_r, beta_vec_r, nu, omega_inv_r, phi_r, xiF_r, xiM_r, eta_r, B_mat_r, has_move, move_probs_r, move_rates_r, muM_node_base_r, muF_node_base_r, tol)
+}
+
 stoch_epi_engine_create <- function(nNodes, nM, nG, nE, nL, nP, nEIP, model_type, egg_ix_r, larv_ix_r, pup_ix_r, male_ix_r, unm_ix_r, fem_ix_r, rE, rL, rP, rEIP, muE_r, muL_r, muP_r, muM_r, muF_r, log_dd, K_r, gamma_dd_r, beta, nu, omega_inv_r, phi_r, xiF_r, xiM_r, eta_r, B_mat_r, has_move, move_probs_r, move_rates_r, muM_node_base_r, muF_node_base_r, tol, c_vec_r, b_vec_r, a_vec_r, muH_param, r_param, delta_param, cT_vec_r, cD_vec_r, cU_vec_r, W_age_r, d1, fd_r, ID0, kd, gamma1_imp, mosy_nodes_r, human_nodes_r, hS_ix_r, hI_ix_r, hE_ix_r, hR_ix_r, has_hmove, h_move_probs_r, h_move_rates_r, nState) {
     .Call(`_malariasimulationGD_stoch_epi_engine_create`, nNodes, nM, nG, nE, nL, nP, nEIP, model_type, egg_ix_r, larv_ix_r, pup_ix_r, male_ix_r, unm_ix_r, fem_ix_r, rE, rL, rP, rEIP, muE_r, muL_r, muP_r, muM_r, muF_r, log_dd, K_r, gamma_dd_r, beta, nu, omega_inv_r, phi_r, xiF_r, xiM_r, eta_r, B_mat_r, has_move, move_probs_r, move_rates_r, muM_node_base_r, muF_node_base_r, tol, c_vec_r, b_vec_r, a_vec_r, muH_param, r_param, delta_param, cT_vec_r, cD_vec_r, cU_vec_r, W_age_r, d1, fd_r, ID0, kd, gamma1_imp, mosy_nodes_r, human_nodes_r, hS_ix_r, hI_ix_r, hE_ix_r, hR_ix_r, has_hmove, h_move_probs_r, h_move_rates_r, nState)
 }
