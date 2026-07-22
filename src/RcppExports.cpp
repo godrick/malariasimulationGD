@@ -533,6 +533,56 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// stoch_ento_step_native
+Rcpp::NumericVector stoch_ento_step_native(Rcpp::NumericVector state_r, double t, double dt_stoch, double dt_out, int nNodes, int nG, int nE, int nL, int nP, Rcpp::IntegerVector egg_ix_r, Rcpp::IntegerVector larv_ix_r, Rcpp::IntegerVector pup_ix_r, Rcpp::IntegerVector male_ix_r, Rcpp::IntegerVector unm_ix_r, Rcpp::IntegerVector fem_ix_r, double rE, double rL, double rP, Rcpp::NumericVector muE_r, Rcpp::NumericVector muL_r, Rcpp::NumericVector muP_r, Rcpp::NumericVector muM_r, Rcpp::NumericVector muF_r, bool log_dd, Rcpp::NumericVector K_r, Rcpp::NumericVector gamma_dd_r, Rcpp::NumericVector beta_vec_r, double nu, Rcpp::NumericVector omega_inv_r, Rcpp::NumericVector phi_r, Rcpp::NumericVector xiF_r, Rcpp::NumericVector xiM_r, Rcpp::NumericMatrix eta_r, Rcpp::NumericMatrix B_mat_r, bool has_move, Rcpp::NumericMatrix move_probs_r, Rcpp::NumericVector move_rates_r, Rcpp::NumericVector muM_node_base_r, Rcpp::NumericVector muF_node_base_r, double tol);
+RcppExport SEXP _malariasimulationGD_stoch_ento_step_native(SEXP state_rSEXP, SEXP tSEXP, SEXP dt_stochSEXP, SEXP dt_outSEXP, SEXP nNodesSEXP, SEXP nGSEXP, SEXP nESEXP, SEXP nLSEXP, SEXP nPSEXP, SEXP egg_ix_rSEXP, SEXP larv_ix_rSEXP, SEXP pup_ix_rSEXP, SEXP male_ix_rSEXP, SEXP unm_ix_rSEXP, SEXP fem_ix_rSEXP, SEXP rESEXP, SEXP rLSEXP, SEXP rPSEXP, SEXP muE_rSEXP, SEXP muL_rSEXP, SEXP muP_rSEXP, SEXP muM_rSEXP, SEXP muF_rSEXP, SEXP log_ddSEXP, SEXP K_rSEXP, SEXP gamma_dd_rSEXP, SEXP beta_vec_rSEXP, SEXP nuSEXP, SEXP omega_inv_rSEXP, SEXP phi_rSEXP, SEXP xiF_rSEXP, SEXP xiM_rSEXP, SEXP eta_rSEXP, SEXP B_mat_rSEXP, SEXP has_moveSEXP, SEXP move_probs_rSEXP, SEXP move_rates_rSEXP, SEXP muM_node_base_rSEXP, SEXP muF_node_base_rSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type state_r(state_rSEXP);
+    Rcpp::traits::input_parameter< double >::type t(tSEXP);
+    Rcpp::traits::input_parameter< double >::type dt_stoch(dt_stochSEXP);
+    Rcpp::traits::input_parameter< double >::type dt_out(dt_outSEXP);
+    Rcpp::traits::input_parameter< int >::type nNodes(nNodesSEXP);
+    Rcpp::traits::input_parameter< int >::type nG(nGSEXP);
+    Rcpp::traits::input_parameter< int >::type nE(nESEXP);
+    Rcpp::traits::input_parameter< int >::type nL(nLSEXP);
+    Rcpp::traits::input_parameter< int >::type nP(nPSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type egg_ix_r(egg_ix_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type larv_ix_r(larv_ix_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type pup_ix_r(pup_ix_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type male_ix_r(male_ix_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type unm_ix_r(unm_ix_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type fem_ix_r(fem_ix_rSEXP);
+    Rcpp::traits::input_parameter< double >::type rE(rESEXP);
+    Rcpp::traits::input_parameter< double >::type rL(rLSEXP);
+    Rcpp::traits::input_parameter< double >::type rP(rPSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type muE_r(muE_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type muL_r(muL_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type muP_r(muP_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type muM_r(muM_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type muF_r(muF_rSEXP);
+    Rcpp::traits::input_parameter< bool >::type log_dd(log_ddSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type K_r(K_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type gamma_dd_r(gamma_dd_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type beta_vec_r(beta_vec_rSEXP);
+    Rcpp::traits::input_parameter< double >::type nu(nuSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type omega_inv_r(omega_inv_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type phi_r(phi_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type xiF_r(xiF_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type xiM_r(xiM_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type eta_r(eta_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type B_mat_r(B_mat_rSEXP);
+    Rcpp::traits::input_parameter< bool >::type has_move(has_moveSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type move_probs_r(move_probs_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type move_rates_r(move_rates_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type muM_node_base_r(muM_node_base_rSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type muF_node_base_r(muF_node_base_rSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(stoch_ento_step_native(state_r, t, dt_stoch, dt_out, nNodes, nG, nE, nL, nP, egg_ix_r, larv_ix_r, pup_ix_r, male_ix_r, unm_ix_r, fem_ix_r, rE, rL, rP, muE_r, muL_r, muP_r, muM_r, muF_r, log_dd, K_r, gamma_dd_r, beta_vec_r, nu, omega_inv_r, phi_r, xiF_r, xiM_r, eta_r, B_mat_r, has_move, move_probs_r, move_rates_r, muM_node_base_r, muF_node_base_r, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
 // stoch_epi_engine_create
 SEXP stoch_epi_engine_create(int nNodes, int nM, int nG, int nE, int nL, int nP, int nEIP, int model_type, Rcpp::IntegerVector egg_ix_r, Rcpp::IntegerVector larv_ix_r, Rcpp::IntegerVector pup_ix_r, Rcpp::IntegerVector male_ix_r, Rcpp::IntegerVector unm_ix_r, Rcpp::IntegerVector fem_ix_r, double rE, double rL, double rP, double rEIP, Rcpp::NumericVector muE_r, Rcpp::NumericVector muL_r, Rcpp::NumericVector muP_r, Rcpp::NumericVector muM_r, Rcpp::NumericVector muF_r, bool log_dd, Rcpp::NumericVector K_r, Rcpp::NumericVector gamma_dd_r, double beta, double nu, Rcpp::NumericVector omega_inv_r, Rcpp::NumericVector phi_r, Rcpp::NumericVector xiF_r, Rcpp::NumericVector xiM_r, Rcpp::NumericMatrix eta_r, Rcpp::NumericMatrix B_mat_r, bool has_move, Rcpp::NumericMatrix move_probs_r, Rcpp::NumericVector move_rates_r, Rcpp::NumericVector muM_node_base_r, Rcpp::NumericVector muF_node_base_r, double tol, Rcpp::Nullable<Rcpp::NumericVector> c_vec_r, Rcpp::Nullable<Rcpp::NumericVector> b_vec_r, Rcpp::NumericVector a_vec_r, double muH_param, double r_param, double delta_param, Rcpp::Nullable<Rcpp::NumericVector> cT_vec_r, Rcpp::Nullable<Rcpp::NumericVector> cD_vec_r, Rcpp::Nullable<Rcpp::NumericVector> cU_vec_r, Rcpp::Nullable<Rcpp::NumericVector> W_age_r, double d1, Rcpp::NumericVector fd_r, double ID0, double kd, double gamma1_imp, Rcpp::IntegerVector mosy_nodes_r, Rcpp::IntegerVector human_nodes_r, Rcpp::IntegerVector hS_ix_r, Rcpp::IntegerVector hI_ix_r, Rcpp::IntegerVector hE_ix_r, Rcpp::IntegerVector hR_ix_r, bool has_hmove, Rcpp::NumericMatrix h_move_probs_r, Rcpp::NumericVector h_move_rates_r, int nState);
 RcppExport SEXP _malariasimulationGD_stoch_epi_engine_create(SEXP nNodesSEXP, SEXP nMSEXP, SEXP nGSEXP, SEXP nESEXP, SEXP nLSEXP, SEXP nPSEXP, SEXP nEIPSEXP, SEXP model_typeSEXP, SEXP egg_ix_rSEXP, SEXP larv_ix_rSEXP, SEXP pup_ix_rSEXP, SEXP male_ix_rSEXP, SEXP unm_ix_rSEXP, SEXP fem_ix_rSEXP, SEXP rESEXP, SEXP rLSEXP, SEXP rPSEXP, SEXP rEIPSEXP, SEXP muE_rSEXP, SEXP muL_rSEXP, SEXP muP_rSEXP, SEXP muM_rSEXP, SEXP muF_rSEXP, SEXP log_ddSEXP, SEXP K_rSEXP, SEXP gamma_dd_rSEXP, SEXP betaSEXP, SEXP nuSEXP, SEXP omega_inv_rSEXP, SEXP phi_rSEXP, SEXP xiF_rSEXP, SEXP xiM_rSEXP, SEXP eta_rSEXP, SEXP B_mat_rSEXP, SEXP has_moveSEXP, SEXP move_probs_rSEXP, SEXP move_rates_rSEXP, SEXP muM_node_base_rSEXP, SEXP muF_node_base_rSEXP, SEXP tolSEXP, SEXP c_vec_rSEXP, SEXP b_vec_rSEXP, SEXP a_vec_rSEXP, SEXP muH_paramSEXP, SEXP r_paramSEXP, SEXP delta_paramSEXP, SEXP cT_vec_rSEXP, SEXP cD_vec_rSEXP, SEXP cU_vec_rSEXP, SEXP W_age_rSEXP, SEXP d1SEXP, SEXP fd_rSEXP, SEXP ID0SEXP, SEXP kdSEXP, SEXP gamma1_impSEXP, SEXP mosy_nodes_rSEXP, SEXP human_nodes_rSEXP, SEXP hS_ix_rSEXP, SEXP hI_ix_rSEXP, SEXP hE_ix_rSEXP, SEXP hR_ix_rSEXP, SEXP has_hmoveSEXP, SEXP h_move_probs_rSEXP, SEXP h_move_rates_rSEXP, SEXP nStateSEXP) {
@@ -863,6 +913,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_malariasimulationGD_solver_get_states", (DL_FUNC) &_malariasimulationGD_solver_get_states, 1},
     {"_malariasimulationGD_solver_set_states", (DL_FUNC) &_malariasimulationGD_solver_set_states, 3},
     {"_malariasimulationGD_solver_step", (DL_FUNC) &_malariasimulationGD_solver_step, 1},
+    {"_malariasimulationGD_stoch_ento_step_native", (DL_FUNC) &_malariasimulationGD_stoch_ento_step_native, 40},
     {"_malariasimulationGD_stoch_epi_engine_create", (DL_FUNC) &_malariasimulationGD_stoch_epi_engine_create, 65},
     {"_malariasimulationGD_stoch_epi_engine_set_seasonal", (DL_FUNC) &_malariasimulationGD_stoch_epi_engine_set_seasonal, 19},
     {"_malariasimulationGD_stoch_epi_engine_set_runtime", (DL_FUNC) &_malariasimulationGD_stoch_epi_engine_set_runtime, 7},
