@@ -39,3 +39,5 @@ test-scripts/*.csv
 test-scripts/**/*.csv
 /test-scripts/one_node_example/output
 /docs
+test-scripts/Busia_landscape/output/careful/calibrated_init_eir_incidence_fixed_delta.rds
+/test-scripts/Busia_landscape/output/careful/figures/incidence_fixed_delta
