@@ -23,8 +23,8 @@ seven_node_movement_settings <- function() {
   # the feasibility band shifts; pick mu inside the new band, or the
   # workflow scripts will error out before calling msimGD.
   list(
-    mu = 5.0,        # target mean realised move distance (km)
-    p_move = 0.05    # per-origin probability of a move-out event per timestep
+    mu = 4.0,        # target mean realised move distance (km)
+    p_move = 0.01    # per-origin probability of a move-out event per timestep
   )
 }
 
