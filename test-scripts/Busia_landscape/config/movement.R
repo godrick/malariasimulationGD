@@ -17,14 +17,12 @@
 # ------------------------------------------------------------------------------
 
 seven_node_movement_settings <- function() {
-  # For the default 14 km, min_dist=1.5 km landscape the feasibility band
-  # `mu_feasible_range()` returns is roughly [3.4, 7.6] km. mu = 5 km sits
-  # comfortably in the middle. If you change `seven_node_landscape.R` knobs
-  # the feasibility band shifts; pick mu inside the new band, or the
-  # workflow scripts will error out before calling msimGD.
+  # Busia calibration assumption: mosquitoes move about 2.1 km on average
+  # conditional on a movement event. The workflow validates that this value
+  # is feasible for the 58-node Busia landscape before running the model.
   list(
-    mu = 4.0,        # target mean realised move distance (km)
-    p_move = 0.01    # per-origin probability of a move-out event per timestep
+    mu = 2.1,        # target mean realised move distance (km)
+    p_move = 0.001   # per-origin probability of a move-out event per timestep
   )
 }
 
