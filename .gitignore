@@ -42,3 +42,4 @@ test-scripts/**/*.csv
 test-scripts/Busia_landscape/output/careful/calibrated_init_eir_incidence_fixed_delta.rds
 /test-scripts/Busia_landscape/output/careful/figures/incidence_fixed_delta
 /test-scripts/Godrick_calibration
+/test-scripts/Busia_landscape/output
