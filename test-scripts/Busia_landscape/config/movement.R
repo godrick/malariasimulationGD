@@ -21,7 +21,7 @@ seven_node_movement_settings <- function() {
   # conditional on a movement event. The workflow validates that this value
   # is feasible for the 58-node Busia landscape before running the model.
   list(
-    mu = 2.1,        # target mean realised move distance (km)
+    mu = 2.0,        # target mean realised move distance (km)
     p_move = 0.001   # per-origin probability of a move-out event per timestep
   )
 }

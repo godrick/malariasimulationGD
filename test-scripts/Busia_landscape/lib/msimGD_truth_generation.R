@@ -1224,7 +1224,8 @@ msimGD_epi_rate_ppy <- function(epi_obs) {
                                       parameter_modifier,
                                       baseline_checkpoint_state = NULL,
                                       baseline_checkpoint_metadata = NULL,
-                                      human_initialization_library = NULL) {
+                                      human_initialization_library = NULL,
+                                      individual_mosquitoes = TRUE) {
   D <- as.matrix(setup$D)
   n_nodes <- nrow(D)
   warmup_days <- as.integer(warmup_days)
@@ -1299,7 +1300,7 @@ msimGD_epi_rate_ppy <- function(epi_obs) {
     bp <- msimGD_make_base_parameters(
       NH = NH[nd],
       theta = theta,
-      individual_mosquitoes = TRUE
+      individual_mosquitoes = isTRUE(individual_mosquitoes)
     )
     bp$move_probs <- mov$mosquito_move_probs
     bp$move_rates <- mov$mosquito_move_rates

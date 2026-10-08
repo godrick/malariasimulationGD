@@ -476,7 +476,8 @@ apply_busia_baseline_interventions <- function(parameters, interventions) {
     parameters <- set_bednets(
       parameters = parameters,
       timesteps = interventions$itn_timesteps,
-      coverages = rep(interventions$itn_usage, length(interventions$itn_timesteps)),
+      coverages = rep(interventions$itn_distribution_coverage,
+                      length(interventions$itn_timesteps)),
       retention = interventions$itn_retention_days,
       dn0 = matrix(interventions$itn_dn0,
                    nrow = length(interventions$itn_timesteps),
@@ -527,6 +528,7 @@ run_truth_raw_counterfactual_eir <- function(setup, cube, NF, NH, tmax, mu,
                                              warmup_days = 0L,
                                              parameter_modifier = NULL,
                                              post_equilibrium_modifier = NULL,
+                                             individual_mosquitoes = TRUE,
                                              seed = NULL) {
   if (!is.null(seed)) {
     set.seed(seed)
@@ -566,7 +568,8 @@ run_truth_raw_counterfactual_eir <- function(setup, cube, NF, NH, tmax, mu,
     parameter_modifier = parameter_modifier,
     baseline_checkpoint_state = NULL,
     baseline_checkpoint_metadata = NULL,
-    human_initialization_library = NULL
+    human_initialization_library = NULL,
+    individual_mosquitoes = individual_mosquitoes
   )
 
   if (!is.null(post_equilibrium_modifier)) {
@@ -762,6 +765,9 @@ MAX_REFINE_ITER <- parse_integer_env(
   "BUSIA_CALIBRATION_MAX_REFINE", 1L, minimum = 0L
 )
 RNG_SEED <- parse_integer_env("BUSIA_RNG_SEED", 20260514L)
+INDIVIDUAL_MOSQUITOES <- parse_logical_env(
+  "BUSIA_INDIVIDUAL_MOSQUITOES", TRUE
+)
 MEAN_TOLERANCE_REL <- parse_numeric_env(
   "BUSIA_INCIDENCE_MEAN_TOLERANCE_REL", 0.05, positive = TRUE
 )
@@ -901,6 +907,7 @@ fast_initial_eir <- function(delta) {
 }
 
 interventions <- list(
+  itn_regime = tolower(trimws(Sys.getenv("BUSIA_ITN_REGIME", unset = "campaign"))),
   itn_enabled = !parse_logical_env("BUSIA_DISABLE_ITNS", FALSE),
   itn_ownership = validate_probability(
     parse_numeric_env("BUSIA_ITN_OWNERSHIP", 0.882, non_negative = TRUE),
@@ -910,6 +917,10 @@ interventions <- list(
     parse_numeric_env("BUSIA_ITN_USAGE", 0.684, non_negative = TRUE),
     "BUSIA_ITN_USAGE"
   ),
+  # This defaults to active use so the historical campaign remains unchanged.
+  # A stationary background regime replaces it with zero because the seeded
+  # initial state, rather than a campaign, supplies the protected people.
+  itn_distribution_coverage = NA_real_,
   itn_distribution_interval_days = parse_integer_env(
     "BUSIA_ITN_DISTRIBUTION_INTERVAL_DAYS", 3L * 365L, minimum = 1L
   ),
@@ -948,6 +959,31 @@ interventions <- list(
   treatment_timesteps = 0L
 )
 
+if (!interventions$itn_regime %in% c("campaign", "stationary_background")) {
+  stop(
+    "BUSIA_ITN_REGIME must be either 'campaign' or 'stationary_background'.",
+    call. = FALSE
+  )
+}
+interventions$itn_distribution_coverage <- interventions$itn_usage
+
+if (identical(interventions$itn_regime, "stationary_background")) {
+  # Godrick/P20-style stationary background ITNs: initialise the selected
+  # active-use fraction in-place, retain their efficacy for practical purposes,
+  # and register-but-skip the day-1 distribution event. set_bednets() still
+  # supplies the efficacy parameters required by the simulator.
+  interventions$itn_distribution_interval_days <- NA_integer_
+  interventions$itn_timesteps <- 1L
+  interventions$itn_distribution_coverage <- 0
+  interventions$itn_initial_time <- 1L
+  interventions$itn_retention_days <- parse_numeric_env(
+    "BUSIA_STATIONARY_ITN_RETENTION_DAYS", 1e12, positive = TRUE
+  )
+  interventions$itn_gamman_days <- parse_numeric_env(
+    "BUSIA_STATIONARY_ITN_GAMMAN_DAYS", 1e12, positive = TRUE
+  )
+}
+
 cat(sprintf(
   "[%s] careful/00 incidence: target mean %.3f, SD %.3f, CV %.3f, age %d-%d days\n",
   format(Sys.time(), "%F %T"),
@@ -961,11 +997,20 @@ cat(sprintf(
 ))
 cat("Calibration EIR definition: raw counterfactual no-intervention init_EIR; interventions are applied after equilibrium initialization.\n")
 cat(sprintf(
-  "Runtime interventions: ITN ownership %.1f%%, ITN active usage %.1f%%, ACT(%s) clinical treatment %.1f%%\n",
+  "Runtime interventions: ITN regime %s, ownership %.1f%%, active usage %.1f%%, ACT(%s) clinical treatment %.1f%%\n",
+  interventions$itn_regime,
   100 * interventions$itn_ownership,
   100 * interventions$itn_usage,
   interventions$treatment_drug,
   100 * interventions$treatment_coverage
+))
+cat(sprintf(
+  "Mosquito simulation mode: %s\n",
+  if (isTRUE(INDIVIDUAL_MOSQUITOES)) {
+    "individual stochastic"
+  } else {
+    "native count-based deterministic screen"
+  }
 ))
 
 # --- Shared Busia setup -----------------------------------------------------
@@ -1029,6 +1074,7 @@ metadata <- list(
   search_warmup_days = SEARCH_WARMUP_DAYS,
   measurement_window_days = MEASUREMENT_WINDOW_DAYS,
   rng_seed = RNG_SEED,
+  individual_mosquitoes = INDIVIDUAL_MOSQUITOES,
   NH_per_node = NH_per_node,
   population_total = sum(NH_per_node),
   population_mean = mean(NH_per_node),
@@ -1195,6 +1241,7 @@ run_candidate <- function(delta, init_EIR, kind, record = TRUE) {
     warmup_days = 0L,
     parameter_modifier = equilibrium_parameter_modifier,
     post_equilibrium_modifier = post_equilibrium_intervention_modifier,
+    individual_mosquitoes = INDIVIDUAL_MOSQUITOES,
     seed = RNG_SEED
   )
   run_seconds <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
@@ -1318,6 +1365,7 @@ run_no_intervention_counterfactual <- function(best) {
     warmup_days = 0L,
     parameter_modifier = equilibrium_parameter_modifier,
     post_equilibrium_modifier = NULL,
+    individual_mosquitoes = INDIVIDUAL_MOSQUITOES,
     seed = RNG_SEED
   )
   run_seconds <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
