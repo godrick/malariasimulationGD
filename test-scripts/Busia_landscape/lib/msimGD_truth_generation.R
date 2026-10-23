@@ -1225,7 +1225,8 @@ msimGD_epi_rate_ppy <- function(epi_obs) {
                                       baseline_checkpoint_state = NULL,
                                       baseline_checkpoint_metadata = NULL,
                                       human_initialization_library = NULL,
-                                      individual_mosquitoes = TRUE) {
+                                      individual_mosquitoes = TRUE,
+                                      native_total_M = FALSE) {
   D <- as.matrix(setup$D)
   n_nodes <- nrow(D)
   warmup_days <- as.integer(warmup_days)
@@ -1322,7 +1323,11 @@ msimGD_epi_rate_ppy <- function(epi_obs) {
         stop("parameter_modifier must return a parameter list.", call. = FALSE)
       }
     }
-    bp <- set_equilibrium(bp, init_EIR = init_EIR)
+    if (isTRUE(native_total_M)) {
+      bp$cube <- cube
+    }
+    bp <- set_equilibrium(bp, init_EIR = init_EIR,
+                          native_total_M = native_total_M)
     equilibrium_total_M[nd] <- unname(as.numeric(bp$total_M))
     init_foim[nd] <- unname(as.numeric(bp$init_foim))
 

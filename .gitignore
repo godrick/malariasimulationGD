@@ -46,3 +46,25 @@ test-scripts/Busia_landscape/output/careful/calibrated_init_eir_incidence_fixed_
 /Papers
 /Paper
 /test-scripts/Busia_landscape/p20-calibration-share
+/test-scripts/MGDrivE3-Examples-main
+test-scripts/Busia_landscape/maps/busia_county_boundary.tsv
+test-scripts/Busia_landscape/maps/release_sites.tsv
+test-scripts/Busia_landscape/maps/teso_reference_boundaries.tsv
+evidence_report_malariasimulationGD.html
+evidence_report_malariasimulationGD.Rmd
+
+# Keep only the new diagnostic implementation from the local Godrick bundle.
+!/test-scripts/Godrick_calibration/
+/test-scripts/Godrick_calibration/*
+!/test-scripts/Godrick_calibration/diagnostics/
+/test-scripts/Godrick_calibration/diagnostics/*
+!/test-scripts/Godrick_calibration/diagnostics/*.R
+!/test-scripts/Godrick_calibration/diagnostics/README.md
+/test-scripts/Godrick_calibration
+/test-scripts/Busia_landscape/careful_stationary_itn
+/test-scripts/Busia_landscape/careful_stationary_itn_release_video
+/test-scripts/Busia_landscape/careful_stationary_itn_teso_south
+/test-scripts/Busia_landscape/maps
+/test-scripts/Busia_landscape/lib
+test-scripts/Busia_landscape/lib/msimGD_truth_generation.R
+test-scripts/Busia_landscape/lib/msimGD_truth_generation.R
