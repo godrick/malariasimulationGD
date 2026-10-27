@@ -1,3 +1,17 @@
+test_that("standalone native defaults expose all MGDrivE2 aquatic substages", {
+  parameters <- get_mosquito_parameters(list(total_M = 50))
+  for (sampler in c("ode", "tau")) {
+    out <- run_mosquito_simulation(
+      1L, parameters, sampler = sampler,
+      seed = if (sampler == "tau") 123L else NULL
+    )
+    for (stage in c("egg", "larva", "pupa")) {
+      expected <- switch(stage, egg = 1:2, larva = 1:3, pupa = 1:2)
+      expect_setequal(out$state_counts$substage[out$state_counts$stage == stage], expected)
+    }
+  }
+})
+
 test_that("standalone mosquito ODE returns lifecycle counts without infection stages", {
   parameters <- get_mosquito_parameters(list(
     total_M = 50,

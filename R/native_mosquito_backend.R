@@ -88,11 +88,12 @@ native_metapop_backend_enabled <- function(parameters) {
 }
 
 native_mosquito_stage_config <- function(parameters) {
+  # Match MGDrivE2 2.1.1 imperial_model_param_list_create() stage counts.
   list(
-    nE = as.integer(if (is.null(parameters$native_mosquito_nE)) 1L else parameters$native_mosquito_nE),
-    nL = as.integer(if (is.null(parameters$native_mosquito_nL)) 1L else parameters$native_mosquito_nL),
-    nP = as.integer(if (is.null(parameters$native_mosquito_nP)) 1L else parameters$native_mosquito_nP),
-    nEIP = as.integer(if (is.null(parameters$native_mosquito_nEIP)) 1L else parameters$native_mosquito_nEIP),
+    nE = as.integer(if (is.null(parameters$native_mosquito_nE)) 2L else parameters$native_mosquito_nE),
+    nL = as.integer(if (is.null(parameters$native_mosquito_nL)) 3L else parameters$native_mosquito_nL),
+    nP = as.integer(if (is.null(parameters$native_mosquito_nP)) 2L else parameters$native_mosquito_nP),
+    nEIP = as.integer(if (is.null(parameters$native_mosquito_nEIP)) 3L else parameters$native_mosquito_nEIP),
     nu = as.numeric(if (is.null(parameters$native_mosquito_nu)) 1 else parameters$native_mosquito_nu),
     dt_stoch = as.numeric(if (is.null(parameters$mosquito_tau_step)) 0.1 else parameters$mosquito_tau_step)
   )

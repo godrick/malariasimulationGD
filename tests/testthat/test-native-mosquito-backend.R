@@ -99,6 +99,63 @@ native_test_equilibrium_metrics <- function(parameters, timesteps = 30L, species
   )
 }
 
+test_that("native Erlang defaults match MGDrivE2 2.1.1 and preserve overrides", {
+  expected <- list(nE = 2L, nL = 3L, nP = 2L, nEIP = 3L)
+  count_names <- c("native_mosquito_nE", "native_mosquito_nL",
+                   "native_mosquito_nP", "native_mosquito_nEIP")
+
+  expect_identical(native_mosquito_stage_config(get_parameters())[names(expected)], expected)
+  null_counts <- stats::setNames(rep(list(NULL), 4L), count_names)
+  expect_identical(native_mosquito_stage_config(null_counts)[names(expected)], expected)
+
+  overrides <- stats::setNames(as.list(c(1L, 4L, 1L, 6L)), count_names)
+  expect_identical(native_mosquito_stage_config(overrides)[names(expected)],
+                   stats::setNames(unname(overrides), names(expected)))
+})
+
+test_that("native default stage layout works for both samplers and node counts", {
+  for (stochastic in c(FALSE, TRUE)) {
+    for (n_nodes in 1:2) {
+      parameters <- get_parameters(list(
+        native_mosquito_backend = TRUE,
+        individual_mosquitoes = stochastic,
+        total_M = 50
+      ))
+      parameter_list <- rep(list(parameters), n_nodes)
+      backend <- native_build_shared_backend(parameter_list, species_i = 1L, timesteps = 2L)
+      expect_identical(dim(backend$shared$index$egg_ix), c(2L, 1L, n_nodes))
+      expect_identical(dim(backend$shared$index$larv_ix), c(3L, 1L, n_nodes))
+      expect_identical(dim(backend$shared$index$pup_ix), c(2L, 1L, n_nodes))
+      expect_identical(dim(backend$shared$index$fem_ix), c(1L, 1L, 5L, n_nodes))
+
+      explicit <- parameters
+      explicit$native_mosquito_nE <- 2L
+      explicit$native_mosquito_nL <- 3L
+      explicit$native_mosquito_nP <- 2L
+      explicit$native_mosquito_nEIP <- 3L
+      explicit_backend <- native_build_shared_backend(
+        rep(list(explicit), n_nodes), species_i = 1L, timesteps = 2L
+      )
+      expect_equal(backend$solvers[[1L]]$get_native_state(),
+                   explicit_backend$solvers[[1L]]$get_native_state())
+      results <- lapply(list(backend, explicit_backend), function(arm) {
+        set.seed(123)
+        for (node in seq_len(n_nodes)) {
+          native_mosquito_model_update(
+            arm$models[[node]], timestep = 0L,
+            mu = parameters$mum[[1L]], foim = parameters$init_foim,
+            f = parameters$blood_meal_rates[[1L]]
+          )
+          arm$solvers[[node]]$step()
+        }
+        arm$solvers[[1L]]$get_native_state()
+      })
+      expect_equal(results[[1L]], results[[2L]])
+      expect_true(all(is.finite(results[[1L]]) & results[[1L]] >= 0))
+    }
+  }
+})
+
 test_that("native deterministic mosquito backend parameterises and steps", {
   parameters <- get_parameters(list(
     native_mosquito_backend = TRUE,
@@ -431,6 +488,11 @@ test_that("native deterministic exact initialization keeps continuous counts", {
 })
 
 test_that("native stochastic mosquito backend parameterises and steps", {
+  old_warning_state <- native_backend_warning_state$tau_leap_backend
+  native_backend_warning_state$tau_leap_backend <- FALSE
+  on.exit({
+    native_backend_warning_state$tau_leap_backend <- old_warning_state
+  })
   parameters <- get_parameters(list(
     native_mosquito_backend = TRUE,
     individual_mosquitoes = TRUE,

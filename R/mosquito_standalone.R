@@ -109,6 +109,12 @@ mosquito_validate_parameters <- function(parameters) {
 #' movement, carrying capacity, and solver controls, but human and parasite
 #' dynamics are not used by the standalone runner.
 #'
+#' @details Missing or NULL `native_mosquito_nE`, `native_mosquito_nL`, and
+#' `native_mosquito_nP` use 2, 3, and 2 Erlang compartments, respectively,
+#' matching MGDrivE2 2.1.1's `imperial_model_param_list_create()`.
+#' Override these counts through `overrides`. Mean development durations remain
+#' controlled by `del`, `dl`, and `dpl`. The standalone runner does not model EIP.
+#'
 #' @param overrides named list of parameter values overriding defaults.
 #' @param cube optional MGDrivE-style inheritance cube.
 #'

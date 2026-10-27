@@ -337,6 +337,16 @@
 #' mosquito backend. High-level simulation entry points default this to TRUE
 #' when left NULL, while low-level helper tests can opt out explicitly;
 #' default = NULL
+#' * native_mosquito_nE / native_mosquito_nL / native_mosquito_nP /
+#' native_mosquito_nEIP - optional native Erlang compartment counts for eggs,
+#' larvae, pupae, and incubating adult females. Missing or NULL values resolve
+#' to 2, 3, 2, and 3, matching MGDrivE2 2.1.1's
+#' `imperial_model_param_list_create()`. Set these fields on the returned
+#' parameter list to override them. Mean durations remain controlled by `del`,
+#' `dl`, `dpl`, and `dem`; changing counts can alter survival, equilibrium,
+#' transmission, and stochastic trajectories. To reproduce the previous
+#' single-compartment configuration, explicitly set all four counts to 1.
+#' Checkpoints must be resumed with the same stage counts used to create them.
 #' * human_initialization - `"equilibrium"` or `"stochastic_resample"`; default
 #' = `"equilibrium"`
 #' * human_initialization_burnin_timesteps - auxiliary single-population burn-in

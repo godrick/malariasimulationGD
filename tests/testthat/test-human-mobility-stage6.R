@@ -241,7 +241,9 @@ test_that("identity explicit mobility leaves deterministic native genotype summa
     mobility = TRUE
   )
 
+  set.seed(123)
   disabled_out <- human_mobility_stage6_run(disabled, timesteps = 5L)
+  set.seed(123)
   enabled_out <- human_mobility_stage6_run(enabled, timesteps = 5L)
 
   for (node in seq_along(disabled_out)) {

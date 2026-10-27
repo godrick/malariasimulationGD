@@ -20,3 +20,10 @@ Defaults are copied from \code{\link[=get_parameters]{get_parameters()}} for mos
 movement, carrying capacity, and solver controls, but human and parasite
 dynamics are not used by the standalone runner.
 }
+\details{
+Missing or NULL \code{native_mosquito_nE}, \code{native_mosquito_nL}, and
+\code{native_mosquito_nP} use 2, 3, and 2 Erlang compartments, respectively,
+matching MGDrivE2 2.1.1's \code{imperial_model_param_list_create()}.
+Override these counts through \code{overrides}. Mean development durations remain
+controlled by \code{del}, \code{dl}, and \code{dpl}. The standalone runner does not model EIP.
+}
