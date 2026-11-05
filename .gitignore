@@ -39,6 +39,8 @@ test-scripts/*.csv
 test-scripts/**/*.csv
 /test-scripts/one_node_example/output
 /docs
+# Local manuscript sources and drafts
+/docs/manuscript/
 test-scripts/Busia_landscape/output/careful/calibrated_init_eir_incidence_fixed_delta.rds
 /test-scripts/Busia_landscape/output/careful/figures/incidence_fixed_delta
 /test-scripts/Godrick_calibration
