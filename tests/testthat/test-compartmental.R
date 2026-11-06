@@ -1,3 +1,22 @@
+test_that("an empty carrying-capacity schedule uses the legacy model baseline", {
+  parameters <- get_parameters(list(
+    native_mosquito_backend = FALSE,
+    individual_mosquitoes = TRUE
+  ))
+  first_step <- function(parameters) {
+    models <- parameterise_mosquito_models(parameters, timesteps = 1L)
+    solver <- parameterise_solvers(models, parameters)[[1]]
+    solver$step()
+    solver$get_states()
+  }
+
+  baseline <- first_step(parameters)
+  parameters$carrying_capacity <- TRUE
+  parameters$carrying_capacity_timesteps <- integer()
+  parameters$carrying_capacity_scalers <- matrix(numeric(), 0L, length(parameters$species))
+  expect_equal(first_step(parameters), baseline)
+})
+
 test_that('ODE stays at equilibrium with a constant total_M', {
   parameters <- get_parameters(list(
     individual_mosquitoes = TRUE

@@ -21,8 +21,8 @@ parameterise_mosquito_models <- function(parameters, timesteps = 0) {
       k0 <- calculate_carrying_capacity(parameters, m, i)
       # Create the carrying capacity object
       k_timeseries <- create_timeseries(size = length(parameters$carrying_capacity_timesteps), k0)
-      if(parameters$carrying_capacity){
-        for(j in 1:length(parameters$carrying_capacity_timesteps)){
+      if (parameters$carrying_capacity) {
+        for (j in seq_along(parameters$carrying_capacity_timesteps)) {
           timeseries_push(
             k_timeseries,
             parameters$carrying_capacity_scalers[j,i] * k0,
