@@ -1,7 +1,8 @@
 test_that('Test age parameter function works', {
+  set.seed(20261105)
   parameters <- get_parameters()
   age_limits <- c(0,1,2,3)*365
-  parameters <- set_epi_outputs(parameters,
+  expect_warning(parameters <- set_epi_outputs(parameters,
                                 age_group = age_limits,
                                 incidence = age_limits+1,
                                 clinical_incidence = age_limits+2,
@@ -13,7 +14,7 @@ test_that('Test age parameter function works', {
                                 ib = age_limits+8,
                                 iva = age_limits+9,
                                 ivm = age_limits+10
-  )
+  ), NA)
   
   sim <- run_simulation(timesteps = 1, parameters)
   
@@ -33,9 +34,28 @@ test_that('Test age parameter function works', {
 })
 
 test_that("run_simulation works with default parameters", {
+  set.seed(20261105)
   sim <- run_simulation(timesteps = 2)
 
   expect_s3_class(sim, "data.frame")
   expect_equal(nrow(sim), 2)
   expect_true(all(c("timestep", "EIR_gamb", "FOIM_gamb") %in% names(sim)))
+})
+
+test_that("output validation rejects complete sets of incompatible parasite outputs", {
+  expect_error(
+    set_epi_outputs(get_parameters(), n_with_hypnozoites = 0:2,
+                    iaa = 0:2, iam = 0:2, hypnozoites = 0:2),
+    "Some selected epi outputs do not apply"
+  )
+  expect_error(
+    set_epi_outputs(get_parameters(parasite = "vivax"), severe_incidence = 0:2,
+                    iva = 0:2, ivm = 0:2, id = 0:2, ib = 0:2),
+    "Some selected epi outputs do not apply"
+  )
+  expect_warning(
+    set_epi_outputs(get_parameters(parasite = "vivax"), n_with_hypnozoites = 0:2,
+                    iaa = 0:2, iam = 0:2, hypnozoites = 0:2),
+    NA
+  )
 })

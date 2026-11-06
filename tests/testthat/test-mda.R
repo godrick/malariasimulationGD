@@ -251,6 +251,7 @@ test_that('MDA moves the diseased and non-diseased population correctly - second
 })
 
 test_that('MDA ignores non-detectable asymptomatics', {
+  set.seed(20261105)
   timestep <- 150
   renderer <- individual::Render$new(timestep)
   parameters <- get_parameters(list(human_population = 4))
@@ -293,7 +294,11 @@ test_that('MDA ignores non-detectable asymptomatics', {
   
   mock_correlation <- mockery::mock(c(TRUE, TRUE, TRUE, TRUE))
   mockery::stub(listener, 'sample_intervention', mock_correlation)
-  local_mocked_bindings(calculate_asymptomatic_detectable = mockery::mock(individual::Bitset$new(4)))
+  # Isolate detectability from random treatment failures, as in the cases above.
+  local_mocked_bindings(
+    bernoulli_multi_p = mockery::mock(1:4),
+    calculate_asymptomatic_detectable = mockery::mock(individual::Bitset$new(4))
+  )
   
   listener(timestep)
   
