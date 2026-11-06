@@ -400,3 +400,13 @@ test_that('set_carrying_capacity works',{
   )
 })
 
+test_that('initial carrying capacity supports an empty species vector', {
+  parameters <- list(
+    species = character(),
+    species_proportions = numeric(),
+    total_M = 0
+  )
+
+  expect_identical(get_init_carrying_capacity(parameters), setNames(numeric(), character()))
+})
+

@@ -172,11 +172,11 @@ set_carrying_capacity <- function(
 #' each vector species 
 #' @export
 get_init_carrying_capacity <- function(parameters){
-  init_cc <- sapply(1:length(parameters$species), function(x){
+  init_cc <- vapply(seq_along(parameters$species), function(x){
     p <- parameters$species_proportions[[x]]
     m <- p * parameters$total_M
     calculate_carrying_capacity(parameters, m, x)
-  })
+  }, numeric(1))
   names(init_cc) <- parameters$species
   return(init_cc)
 }
