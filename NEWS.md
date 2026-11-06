@@ -1,3 +1,8 @@
+# malariasimulationGD (development version)
+
+* Make the native mobility constructor regression work with installed packages.
+  Developer workflow tests now run separately under `test-scripts/tests/`.
+
 # malariasimulationGD 2.0.2
 
 * P. Vivax model by @rjsheppard

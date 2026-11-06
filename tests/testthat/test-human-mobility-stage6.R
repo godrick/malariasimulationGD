@@ -372,10 +372,34 @@ test_that("native EIP progression still runs with explicit mobility active", {
 })
 
 test_that("native C++ human movement remains disabled in constructor calls", {
-  source <- readLines(testthat::test_path("../../R/native_mosquito_backend.R"))
-  has_hmove_lines <- grep("has_hmove\\s*=", source, value = TRUE)
+  set.seed(20261105)
+  calls <- list()
+  capture_constructor <- function(constructor, sampler) {
+    force(constructor)
+    force(sampler)
+    function(...) {
+      args <- list(...)
+      calls[[sampler]] <<- args
+      do.call(constructor, args)
+    }
+  }
+  local_mocked_bindings(
+    epi_engine_create = capture_constructor(epi_engine_create, "deterministic"),
+    stoch_epi_engine_create = capture_constructor(stoch_epi_engine_create, "stochastic")
+  )
 
-  expect_length(has_hmove_lines, 2L)
-  expect_true(all(grepl("has_hmove\\s*=\\s*FALSE", has_hmove_lines)))
-  expect_false(any(grepl("has_hmove\\s*=\\s*TRUE", source)))
+  for (stochastic in c(FALSE, TRUE)) {
+    parameters <- human_mobility_stage6_params(
+      overrides_1 = list(individual_mosquitoes = stochastic),
+      overrides_2 = list(individual_mosquitoes = stochastic)
+    )
+    native_build_shared_backend(parameters, species_i = 1L, timesteps = 1L)
+  }
+
+  expect_setequal(names(calls), c("deterministic", "stochastic"))
+  for (args in calls) {
+    expect_identical(args$has_hmove, FALSE)
+    rates <- if (is.null(args$h_move_rates_r)) args$h_move_rates else args$h_move_rates_r
+    expect_equal(rates, c(0, 0))
+  }
 })
