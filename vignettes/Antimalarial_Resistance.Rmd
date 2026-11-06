@@ -336,7 +336,7 @@ We can now use our lists of `malariasimulationGD` parameters to run the simulati
 simulation_outputs <- list()
 
 # Run the simulations
-for(i in seq(length(simulation_parameters))) {
+for (i in seq_along(simulation_parameters)) {
   
   # Run the i-th simulation
   simulation_temp <- run_simulation(timesteps = timesteps, 
