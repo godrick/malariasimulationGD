@@ -281,15 +281,15 @@
 #'
 #' rendering:
 #' All values are in timesteps and all ranges are inclusive.
-#' Please set rendered age groups using the convenience function
+#' Use [set_epi_outputs()] to specify age groups using breaks in days.
 #' 
 #' * age_group_rendering_min_ages - the minimum ages for population size outputs; default = turned off
 #' * age_group_rendering_max_ages - the corresponding max ages; default = turned off
 #' * incidence_rendering_min_ages - the minimum ages for incidence
 #' outputs (includes asymptomatic microscopy +); default = turned off
 #' * incidence_rendering_max_ages - the corresponding max ages; default = turned off
-#' * clinical_incidence_rendering_min_ages - the minimum ages for clinical incidence outputs (symptomatic); default = 0
-#' * clinical_incidence_rendering_max_ages - the corresponding max ages; default = 1825
+#' * clinical_incidence_rendering_min_ages - the minimum ages for symptomatic incidence (empty by default)
+#' * clinical_incidence_rendering_max_ages - the corresponding inclusive maxima (empty by default)
 #' * severe_incidence_rendering_min_ages - the minimum ages for severe incidence
 #' outputs; default = turned off
 #' * severe_incidence_rendering_max_ages - the corresponding max ages; default = turned off
@@ -331,8 +331,11 @@
 #'
 #' * mosquito_limit - the maximum number of mosquitoes to allow for in the
 #' simulation; default = 1.00E+05
-#' * individual_mosquitoes - boolean whether adult mosquitoes are modeled
-#' individually or compartmentally; default = TRUE
+#' * individual_mosquitoes - with the native backend, `FALSE` (default)
+#' advances continuous mosquito counts with an ODE solver. `TRUE` advances
+#' integer counts with stochastic tau leaps. Humans have individual records
+#' under either setting. With the legacy backend this flag selects individual
+#' adult mosquitoes or compartmental dynamics.
 #' * native_mosquito_backend - boolean toggle for the customMGDrive2 native
 #' mosquito backend. High-level simulation entry points default this to TRUE
 #' when left NULL, while low-level helper tests can opt out explicitly;
@@ -372,15 +375,18 @@
 #' * ode_max_steps - the max number of steps for the solver; default = 1e6
 #' * enable_heterogeneity - boolean whether to include heterogeneity in biting
 #' rates; default = TRUE
-#' * cube - optional MGDrivE-style inheritance cube for adult mosquito genotype
-#' tracking in hybrid mode; default = NULL
+#' * cube - optional MGDrivE-style inheritance cube. In the native backend,
+#' `genotypesID` orders the genotype compartments. Maternal and paternal
+#' genotypes determine the offspring distribution. Default = NULL.
 #' * vector_infectivity_g - optional genotype-specific mosquito-to-human
 #' transmission multipliers, applied on the human infection side after bite
 #' exposure is generated. These are relative multipliers against the internal
 #' human-side baseline transmission probability (`b0` for falciparum, `b` for
 #' vivax); default = NULL
 #' * move_probs / move_rates - optional mosquito movement probability matrix and
-#' origin rate vector for the native metapop backend; default = NULL
+#' origin departure rates per day for the native metapopulation backend.
+#' Entry `[i, j]` weights adult mosquito flow from node `i` to node `j`.
+#' Node order follows the parameter list. Both inputs default to NULL.
 #' * mosquito_move_probs / mosquito_move_rates - legacy aliases for the same
 #' mosquito movement inputs; default = NULL
 #' * human_mobility_enabled - boolean switch for explicit R-layer temporary

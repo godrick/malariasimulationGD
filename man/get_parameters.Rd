@@ -306,15 +306,15 @@ please set antimalarial resistance parameters with the convenience functions in
 
 rendering:
 All values are in timesteps and all ranges are inclusive.
-Please set rendered age groups using the convenience function
+Use \code{\link[=set_epi_outputs]{set_epi_outputs()}} to specify age groups using breaks in days.
 \itemize{
 \item age_group_rendering_min_ages - the minimum ages for population size outputs; default = turned off
 \item age_group_rendering_max_ages - the corresponding max ages; default = turned off
 \item incidence_rendering_min_ages - the minimum ages for incidence
 outputs (includes asymptomatic microscopy +); default = turned off
 \item incidence_rendering_max_ages - the corresponding max ages; default = turned off
-\item clinical_incidence_rendering_min_ages - the minimum ages for clinical incidence outputs (symptomatic); default = 0
-\item clinical_incidence_rendering_max_ages - the corresponding max ages; default = 1825
+\item clinical_incidence_rendering_min_ages - the minimum ages for symptomatic incidence (empty by default)
+\item clinical_incidence_rendering_max_ages - the corresponding inclusive maxima (empty by default)
 \item severe_incidence_rendering_min_ages - the minimum ages for severe incidence
 outputs; default = turned off
 \item severe_incidence_rendering_max_ages - the corresponding max ages; default = turned off
@@ -359,8 +359,11 @@ miscellaneous:
 \itemize{
 \item mosquito_limit - the maximum number of mosquitoes to allow for in the
 simulation; default = 1.00E+05
-\item individual_mosquitoes - boolean whether adult mosquitoes are modeled
-individually or compartmentally; default = TRUE
+\item individual_mosquitoes - with the native backend, \code{FALSE} (default)
+advances continuous mosquito counts with an ODE solver. \code{TRUE} advances
+integer counts with stochastic tau leaps. Humans have individual records
+under either setting. With the legacy backend this flag selects individual
+adult mosquitoes or compartmental dynamics.
 \item native_mosquito_backend - boolean toggle for the customMGDrive2 native
 mosquito backend. High-level simulation entry points default this to TRUE
 when left NULL, while low-level helper tests can opt out explicitly;
@@ -400,15 +403,18 @@ change; default = 0
 \item ode_max_steps - the max number of steps for the solver; default = 1e6
 \item enable_heterogeneity - boolean whether to include heterogeneity in biting
 rates; default = TRUE
-\item cube - optional MGDrivE-style inheritance cube for adult mosquito genotype
-tracking in hybrid mode; default = NULL
+\item cube - optional MGDrivE-style inheritance cube. In the native backend,
+\code{genotypesID} orders the genotype compartments. Maternal and paternal
+genotypes determine the offspring distribution. Default = NULL.
 \item vector_infectivity_g - optional genotype-specific mosquito-to-human
 transmission multipliers, applied on the human infection side after bite
 exposure is generated. These are relative multipliers against the internal
 human-side baseline transmission probability (\code{b0} for falciparum, \code{b} for
 vivax); default = NULL
 \item move_probs / move_rates - optional mosquito movement probability matrix and
-origin rate vector for the native metapop backend; default = NULL
+origin departure rates per day for the native metapopulation backend.
+Entry \verb{[i, j]} weights adult mosquito flow from node \code{i} to node \code{j}.
+Node order follows the parameter list. Both inputs default to NULL.
 \item mosquito_move_probs / mosquito_move_rates - legacy aliases for the same
 mosquito movement inputs; default = NULL
 \item human_mobility_enabled - boolean switch for explicit R-layer temporary

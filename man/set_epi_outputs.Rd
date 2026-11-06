@@ -2,7 +2,7 @@
 % Please edit documentation in R/output_parameters.R
 \name{set_epi_outputs}
 \alias{set_epi_outputs}
-\title{Parameterise age grouped output rendering}
+\title{Set age groups for epidemiological outputs}
 \usage{
 set_epi_outputs(
   parameters,
@@ -24,43 +24,63 @@ set_epi_outputs(
 )
 }
 \arguments{
-\item{parameters}{the model parameters}
+\item{parameters}{Model parameters, usually from \code{\link[=get_parameters]{get_parameters()}}.}
 
-\item{age_group}{age breaks for population size outputs; default = NULL}
+\item{age_group}{Age breaks for population counts.}
 
-\item{incidence}{age breaks for incidence outputs (D+Tr+A); default = NULL}
+\item{incidence}{Age breaks for incidence (D + Tr + A).}
 
-\item{clinical_incidence}{age breaks for clinical incidence outputs (symptomatic); default = c(0, 1825)}
+\item{clinical_incidence}{Age breaks for symptomatic incidence.}
 
-\item{severe_incidence}{age breaks for severe incidence outputs (pf only); default = NULL}
+\item{severe_incidence}{Age breaks for severe incidence (falciparum only).}
 
-\item{prevalence}{age breaks for clinical prevalence outputs (pcr and lm detectable infections); default = c(730, 3650)}
+\item{prevalence}{Age breaks for infections detectable by PCR or light microscopy.}
 
-\item{n_with_hypnozoites}{age breaks for individuals with hypnozoites outputs (pv only); default = NULL}
+\item{n_with_hypnozoites}{Age breaks for counts of people with hypnozoites (vivax only).}
 
-\item{ica}{age breaks for average acquired clinical immunity; default = NULL}
+\item{ica}{Age breaks for average acquired clinical immunity.}
 
-\item{icm}{age breaks for average maternal clinical immunity; default = NULL}
+\item{icm}{Age breaks for average maternal clinical immunity.}
 
-\item{iva}{age breaks for average acquired severe immunity (pf only); default = NULL}
+\item{iva}{Age breaks for average acquired immunity to severe disease (falciparum only).}
 
-\item{ivm}{age breaks for average maternal severe immunity (pf only); default = NULL}
+\item{ivm}{Age breaks for average maternal immunity to severe disease (falciparum only).}
 
-\item{id}{age breaks for average immunity to detectability (pf only); default = NULL}
+\item{id}{Age breaks for average immunity to detectability (falciparum only).}
 
-\item{ib}{age breaks for average blood immunity (pf only); default = NULL}
+\item{ib}{Age breaks for average blood immunity (falciparum only).}
 
-\item{iaa}{age breaks for average acquired antiparasite immunity (pv only); default = NULL}
+\item{iaa}{Age breaks for average acquired antiparasite immunity (vivax only).}
 
-\item{iam}{age breaks for average maternal antiparasite immunity (pv only); default = NULL}
+\item{iam}{Age breaks for average maternal antiparasite immunity (vivax only).}
 
-\item{hypnozoites}{age breaks for average hypnozoite batches (pv only); default = NULL}
+\item{hypnozoites}{Age breaks for the average number of hypnozoite batches (vivax only).}
+}
+\value{
+The updated parameter list. For each supplied output,
+\verb{*_rendering_min_ages} and \verb{*_rendering_max_ages} hold the inclusive bounds.
 }
 \description{
-Parameterise age grouped output rendering
+Supply age breaks for each output you want to update. Omitting an argument
+or passing \code{NULL} keeps that output's existing age groups in \code{parameters}.
 }
 \details{
-this function produces contiguous age groups, inclusive of the lower
-age limit and exclusive of the upper age limit: e.g., c(0, 10, 100) will produce
-two age groups: 0-9 and 10-99 in days.
+Give breaks in increasing order, in whole days. Each group starts
+at one break and ends the day before the next. For example, \code{c(0, 10, 100)}
+defines two groups: ages 0 through 9 days and 10 through 99 days.
+
+With default \code{\link[=get_parameters]{get_parameters()}} settings, clinical incidence has no age
+groups and prevalence has one group covering ages 730 through 3650 days
+inclusive. To specify that same prevalence group using breaks, supply
+\code{prevalence = c(730, 3651)}.
+}
+\examples{
+p <- get_parameters()
+p <- set_epi_outputs(p, clinical_incidence = c(0, 10, 100))
+p$clinical_incidence_rendering_min_ages  # 0, 10
+p$clinical_incidence_rendering_max_ages  # 9, 99
+
+# Changing population counts later keeps the clinical incidence groups.
+p <- set_epi_outputs(p, age_group = c(0, 365))
+p$clinical_incidence_rendering_max_ages  # 9, 99
 }
