@@ -52,6 +52,8 @@ and numerical output as part of the public interface.
 - Start each distinct task on a separate branch, normally `codex/<topic>` based
   on `main`. Reuse an existing task branch only for work within that same scope.
   Check branch names before editing and do not overwrite an existing branch.
+  If the task depends on an unmerged branch, keep a separate dependent branch
+  and identify its prerequisite/base in the handoff instead of merging early.
 - Keep `main` stable. If related uncommitted work is already on `main`, preserve
   it while creating the task branch before continuing. Do not discard, reset,
   or automatically stash changes to switch branches; isolate unrelated work
@@ -75,7 +77,8 @@ and numerical output as part of the public interface.
   review rather than forcing deletion. Remote branch deletion requires an
   explicit request as well.
 
-See `CONTRIBUTING.md` for the contributor-facing workflow.
+See `CONTRIBUTING.md` for the contributor-facing workflow, `DEVELOPMENT.md` for
+the code/process guide, and `.github/pull_request_template.md` for review notes.
 
 ## Scientific and behavioural guardrails
 
@@ -196,7 +199,7 @@ Rscript -e 'testthat::test_local(".")'
 For package-level validation, run when proportionate to the change:
 
 ```sh
-R CMD check --no-manual --no-build-vignettes .
+R CMD check --no-manual --no-build-vignettes --no-vignettes .
 ```
 
 Additional expectations:
