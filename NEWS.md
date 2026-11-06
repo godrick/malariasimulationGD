@@ -9,6 +9,8 @@
   Developer workflow tests now run separately under `test-scripts/tests/`.
 * Correct package dependency declarations, dataset references, and namespace
   qualification. Preserve the optional digest cache-key fallback.
+* Remove list-coercion warnings in age-output configuration without changing its
+  existing acceptance rules, and resolve two compiler diagnostics.
 
 # malariasimulationGD 2.0.2
 

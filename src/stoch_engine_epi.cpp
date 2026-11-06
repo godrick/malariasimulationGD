@@ -1074,8 +1074,6 @@ Rcpp::NumericVector stoch_epi_step_native(
     double t, double dt_stoch, double dt_out)
 {
   Rcpp::XPtr<StochEpiParams> p(engine_ptr);
-  const int nState = p->nState;
-
   std::vector<double> state(state_r.begin(), state_r.end());
 
   GetRNGstate();

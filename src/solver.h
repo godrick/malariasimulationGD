@@ -8,6 +8,7 @@
 #ifndef SRC_SOLVER_H_
 #define SRC_SOLVER_H_
 
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 // [[Rcpp::depends(BH)]]
 #include <boost/numeric/odeint.hpp>
