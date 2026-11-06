@@ -1,0 +1,70 @@
+name: Advisory R lint
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint report (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      # Static linting needs no package installation or model dependencies.
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: any::lintr, any::sessioninfo
+          dependencies: '"hard"'
+
+      - name: Report findings without changing source
+        shell: Rscript {0}
+        run: |
+          report_dir <- file.path(Sys.getenv("RUNNER_TEMP"), "lint-report")
+          dir.create(report_dir, recursive = TRUE, showWarnings = FALSE)
+          capture.output(sessionInfo(), file = file.path(report_dir, "session-info.txt"))
+          lints <- lintr::lint_package(".", cache = FALSE)
+          capture.output(print(lints), file = file.path(report_dir, "findings.txt"))
+          rules <- vapply(lints, function(x) x$linter, character(1))
+          counts <- as.data.frame(table(rules), stringsAsFactors = FALSE)
+          names(counts) <- c("rule", "findings")
+          utils::write.csv(counts, file.path(report_dir, "counts.csv"), row.names = FALSE)
+          print(counts)
+          summary <- c(
+            "### Advisory R lint",
+            paste("Findings:", length(lints)),
+            "Findings do not fail this job. Review the lint-report artifact.",
+            "No formatting or source changes were applied."
+          )
+          writeLines(summary)
+          cat(paste(summary, collapse = "\n\n"), "\n",
+              file = Sys.getenv("GITHUB_STEP_SUMMARY"), append = TRUE)
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: ${{ runner.temp }}/lint-report
+          if-no-files-found: warn
+          retention-days: 14
