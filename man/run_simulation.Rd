@@ -113,3 +113,10 @@ susceptible
 \item n_slow_parasite_clearance: number of clinically treated individuals who experienced slow parasite clearance
 }
 }
+\details{
+With \code{native_mosquito_backend = TRUE}, humans are followed
+individually and mosquitoes are counted by stage and genotype.
+Set \code{individual_mosquitoes = FALSE} for mosquito ODEs or \code{TRUE} for
+stochastic tau leaps. For a checkpoint use \code{\link[=run_resumable_simulation]{run_resumable_simulation()}}.
+For interacting populations see \code{\link[=run_metapop_simulation]{run_metapop_simulation()}}.
+}

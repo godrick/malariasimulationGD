@@ -25,7 +25,7 @@ run_resumable_simulation(
 }
 \value{
 a list with \code{data} (dataframe of results) and \code{state} (final simulation state).
-When \code{parameters$cube} is provided in hybrid mosquito mode, an additional
+With a cube and either native mosquito sampler (or legacy individual mode), an additional
 \code{mosquito_genotypes} entry is returned containing per-timestep female and male
 adult genotype counts and the egg viability fraction \code{V}, and the same arrays
 are attached as attributes on \code{data}. When genotype-specific mosquito-to-
@@ -37,4 +37,10 @@ human transmission is enabled via \code{vector_infectivity_g} or \code{cube$b}, 
 this function accepts an initial simulation state as an argument, and returns the
 final state after running all of its timesteps. This allows one run to be resumed, possibly
 having changed some of the parameters.
+}
+\details{
+To continue a native run, pass its complete \code{state}, keep the
+mosquito sampler, genotype order and stage layout, and specify the final
+day. A checkpoint after day 2 continued to day 5 yields rows for days
+3 through 5. Set \code{restore_random_state = TRUE} when reproducing a trajectory.
 }

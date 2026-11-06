@@ -22,7 +22,7 @@ run_metapop_simulation(
 )
 }
 \arguments{
-\item{timesteps}{the number of timesteps to run the simulation for (in days)}
+\item{timesteps}{Final simulation day, including days already run if resuming.}
 
 \item{parameters}{a list of model parameter lists for each population}
 
@@ -61,11 +61,42 @@ and run in a state-only mode suitable for checkpoint burn-in}
 \item{return_summary}{if TRUE, return a lightweight final-state summary}
 }
 \value{
-a list of dataframe of model outputs as in \code{run_simulation}. When
+By default, a list of output data frames in parameter-list order.
+With \code{return_state} or \code{return_summary}, this list is in \code{data} alongside the
+requested \code{state} or \code{summary}. When
 explicit human mobility diagnostics are enabled, the output list also has
 attributes \code{OD_started_trips}, \code{OD_active_overnight_stays}, and
 \code{mean_remaining_trip_duration}.
 }
 \description{
 Run a metapopulation model
+}
+\details{
+In native runs each species has one mosquito state spanning all
+nodes. Use the same node order for \code{parameters} and every movement or
+mixing matrix. Adult mosquitoes move according to \code{move_rates} and
+\code{move_probs}. Human overnight trips use \code{human_move_probs}, with home
+nodes in rows and destinations in columns. A diagonal entry means
+staying home when eligible to travel. Each person's exposure follows
+their location while their infection history stays on their home record.
+Explicit trips require identity import and export mixing, zero capture
+matrices and a positive exposure delay (\code{de}).
+}
+\examples{
+set.seed(20261105)
+# Node order is village, town in both matrices.
+p <- get_parameters(list(
+  native_mosquito_backend = TRUE, individual_mosquitoes = TRUE,
+  human_population = 20L, total_M = 50, progress_bar = FALSE,
+  move_rates = c(0.02, 0.01), move_probs = matrix(c(0, 1, 1, 0), 2),
+  human_mobility_enabled = TRUE,
+  human_move_probs = rbind(c(0.9, 0.1), c(0.2, 0.8)),
+  human_trip_duration_type = "fixed", human_trip_duration_mean = 1
+))
+result <- run_metapop_simulation(
+  2L, parameters = list(village = p, town = p),
+  mixing_tt = 1L, export_mixing = list(diag(2)), import_mixing = list(diag(2)),
+  p_captured_tt = 1L, p_captured = list(matrix(0, 2, 2)), p_success = 0
+)
+result[[1L]]$timestep  # Days observed in the village
 }

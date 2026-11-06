@@ -98,6 +98,11 @@
 #' @param timesteps the number of timesteps to run the simulation for (in days)
 #' @param parameters a named list of parameters to use
 #' @param correlations correlation parameters
+#' @details With `native_mosquito_backend = TRUE`, humans are followed
+#'   individually and mosquitoes are counted by stage and genotype.
+#'   Set `individual_mosquitoes = FALSE` for mosquito ODEs or `TRUE` for
+#'   stochastic tau leaps. For a checkpoint use [run_resumable_simulation()].
+#'   For interacting populations see [run_metapop_simulation()].
 #' @return dataframe of results
 #' @export
 run_simulation <- function(
@@ -113,13 +118,17 @@ run_simulation <- function(
 #' @description this function accepts an initial simulation state as an argument, and returns the
 #' final state after running all of its timesteps. This allows one run to be resumed, possibly
 #' having changed some of the parameters.
+#' @details To continue a native run, pass its complete `state`, keep the
+#'   mosquito sampler, genotype order and stage layout, and specify the final
+#'   day. A checkpoint after day 2 continued to day 5 yields rows for days
+#'   3 through 5. Set `restore_random_state = TRUE` when reproducing a trajectory.
 #' @param timesteps the timestep at which to stop the simulation
 #' @param parameters a named list of parameters to use
 #' @param correlations correlation parameters
 #' @param initial_state the state from which the simulation is resumed
 #' @param restore_random_state if TRUE, restore the random number generator's state from the checkpoint.
 #' @return a list with `data` (dataframe of results) and `state` (final simulation state).
-#' When `parameters$cube` is provided in hybrid mosquito mode, an additional
+#' With a cube and either native mosquito sampler (or legacy individual mode), an additional
 #' `mosquito_genotypes` entry is returned containing per-timestep female and male
 #' adult genotype counts and the egg viability fraction `V`, and the same arrays
 #' are attached as attributes on `data`. When genotype-specific mosquito-to-
@@ -380,7 +389,16 @@ run_resumable_simulation <- function(
 
 #' @title Run a metapopulation model
 #'
-#' @param timesteps the number of timesteps to run the simulation for (in days)
+#' @details In native runs each species has one mosquito state spanning all
+#'   nodes. Use the same node order for `parameters` and every movement or
+#'   mixing matrix. Adult mosquitoes move according to `move_rates` and
+#'   `move_probs`. Human overnight trips use `human_move_probs`, with home
+#'   nodes in rows and destinations in columns. A diagonal entry means
+#'   staying home when eligible to travel. Each person's exposure follows
+#'   their location while their infection history stays on their home record.
+#'   Explicit trips require identity import and export mixing, zero capture
+#'   matrices and a positive exposure delay (`de`).
+#' @param timesteps Final simulation day, including days already run if resuming.
 #' @param parameters a list of model parameter lists for each population
 #' @param correlations a list of correlation parameters for each population
 #' (default: NULL)
@@ -404,10 +422,29 @@ run_resumable_simulation <- function(
 #' @param render_output if FALSE, skip output rendering/data-frame materialization
 #'   and run in a state-only mode suitable for checkpoint burn-in
 #' @param return_summary if TRUE, return a lightweight final-state summary
-#' @return a list of dataframe of model outputs as in `run_simulation`. When
+#' @return By default, a list of output data frames in parameter-list order.
+#'   With `return_state` or `return_summary`, this list is in `data` alongside the
+#'   requested `state` or `summary`. When
 #' explicit human mobility diagnostics are enabled, the output list also has
 #' attributes `OD_started_trips`, `OD_active_overnight_stays`, and
 #' `mean_remaining_trip_duration`.
+#' @examples
+#' set.seed(20261105)
+#' # Node order is village, town in both matrices.
+#' p <- get_parameters(list(
+#'   native_mosquito_backend = TRUE, individual_mosquitoes = TRUE,
+#'   human_population = 20L, total_M = 50, progress_bar = FALSE,
+#'   move_rates = c(0.02, 0.01), move_probs = matrix(c(0, 1, 1, 0), 2),
+#'   human_mobility_enabled = TRUE,
+#'   human_move_probs = rbind(c(0.9, 0.1), c(0.2, 0.8)),
+#'   human_trip_duration_type = "fixed", human_trip_duration_mean = 1
+#' ))
+#' result <- run_metapop_simulation(
+#'   2L, parameters = list(village = p, town = p),
+#'   mixing_tt = 1L, export_mixing = list(diag(2)), import_mixing = list(diag(2)),
+#'   p_captured_tt = 1L, p_captured = list(matrix(0, 2, 2)), p_success = 0
+#' )
+#' result[[1L]]$timestep  # Days observed in the village
 #' @export
 run_metapop_simulation <- function(
   timesteps,
