@@ -1,5 +1,6 @@
 test_that('Initial states are consistent with equilibrium', {
   skip_on_ci()
+  set.seed(20261105)
   population <- 10000
   
   EIRs <- c(1, 10, 100)
@@ -28,9 +29,10 @@ test_that('Initial states are consistent with equilibrium', {
       
       vars <- create_variables(parameters = eq_params)
       
+      hypnozoite_counts <- seq_len(dim(eq$states$HH)[3L]) - 1L
       eq_expected <- c(sapply(c("S","D","A","U","T"), function(state){sum(eq$states[[state]])}),
                        sapply(c("ICA","ICM","IAA","IAM"), function(x){sum(eq$states$HH * eq$states[[x]])}),
-                       sum(colSums(eq$states$HH, dims = 2) * c(1:dim(eq$states$HH)[3]-1)))
+                       sum(colSums(eq$states$HH, dims = 2) * hypnozoite_counts))
       
       observed <- c(c(vars$state$get_size_of("S"),
                       vars$state$get_size_of("D"),

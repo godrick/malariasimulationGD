@@ -673,7 +673,7 @@ initial_state_vivax <- function(parameters, age, groups, eq, states) {
         a <- age[[i]]
         human_states <- c(expand.grid("hyp" = 0:parameters$kmax, "human_state" = eq_states))
         probs <- c(sapply(eq_states, function(state){eq[[state]][which.max(a < eq$Age[-1]), g, ]}))
-        smp <- sample(x = 1:length(probs), size = 1, replace = T, prob = probs)
+        smp <- sample(x = seq_along(probs), size = 1, replace = TRUE, prob = probs)
         return(c(human_states$human_state[smp],human_states$hyp[smp]))
       }
     )
