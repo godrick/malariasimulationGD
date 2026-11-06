@@ -27,7 +27,8 @@ equivalence unless it was checked in a comparable configuration. -->
 
 <!-- Include focused tests and broader checks in proportion to risk. List
 failures, warnings, notes, skips, and checks not run with their reasons. Keep
-scientific validation distinct from build/style checks. -->
+scientific validation distinct from build/style checks. Link the GitHub run when
+available and review its package-check artifacts and advisory lint report. -->
 
 ## Documentation and review
 

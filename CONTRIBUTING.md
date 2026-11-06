@@ -124,7 +124,7 @@ whole developer workspace. Direct `lintr::lint()` calls target a file explicitly
 keep the same scope when selecting one.
 
 Advisory mode is recorded with `error_on_lint: FALSE`. Existing findings do not
-block a commit or merge in this stage, and no CI or commit hook is added. Review
+block a commit or merge; GitHub CI reports them without applying fixes. Review
 new findings in the area being edited, keep any `# nolint: rule_name.` exception
 narrow and explained, and do not suppress whole maintained modules to reduce
 the count. See [the initial lint baseline](tests/LINT-BASELINE.md) for measured
@@ -311,9 +311,53 @@ commands were checked and which setup/download steps were not executed.
 For GitHub, the recommended repository policy is pull requests into `main`
 with required validation checks. Do not push development changes directly to
 `main`. Documenting this policy does not configure remote repository settings.
-Shared lint/editor conventions are advisory. GitHub automation and required CI
-checks are a later workflow step; the template itself does not run or enforce
-them.
+
+## GitHub automation
+
+The Stage 4 workflows run on pushes to `main` and `codex/**`, pull requests
+targeting `main`, and manual dispatch. Other development branch names receive
+checks when they open a pull request into `main`. There are no path exclusions:
+even a developer-only change gets a status, without running its scenarios.
+Newer runs cancel superseded runs for the same workflow and branch/pull request.
+
+| Workflow | Scope and result |
+| --- | --- |
+| [R package check](.github/workflows/R-CMD-check.yaml) | Current R release on Linux; installs all declared dependencies, builds vignettes, checks the installed package, and fails on errors or warnings |
+| [Advisory R lint](.github/workflows/lint.yaml) | Installs only lint tooling, uses `.lintr` with `lint_package()`, and reports findings without failing because of their count |
+
+The package job uses the [standard r-lib check action](https://github.com/r-lib/actions/tree/v2/check-r-package).
+It builds vignette artifacts once, then checks with `--no-manual`,
+`--no-build-vignettes`, and `--no-vignettes` to avoid repeating their simulations.
+All declared suggested packages are required; missing dependencies are not
+silently accepted. Package-check results are uploaded on success or failure of
+the check, including its test output. Dependency/setup failures can occur before
+check artifacts exist. Logs include dependency versions and resolved sources;
+the declared GitHub `Remotes` remain unpinned, so this is not a locked scientific
+environment.
+
+Lint produces a job summary and a `lint-report` artifact containing full
+findings, counts by rule, and session information, retained for 14 days. Findings
+are advisory; a setup, configuration, or tooling failure can still fail the job.
+There is no automatic formatting, source modification, commit, push, or merge.
+`test-scripts/` is excluded by the package build and lint configuration. Neither
+workflow runs developer scenarios, calibration, performance studies, or their
+separate developer tests.
+
+The workflows use ordinary `pull_request` events and a read-only repository
+token. They do not require a personal token or publish artifacts outside the
+workflow run. Actions are referenced by major version; review upstream action
+updates as workflow maintenance. `CI=true` retains existing CI skips, so passing
+CI does not replace the broader local scientific tests. Linux/current R is an
+initial automation target, not a supported-platform or minimum-R declaration.
+Known compatibility notes remain visible and do not fail the warning threshold;
+see [the repair report](tests/BASELINE-REPAIRS.md#remaining-compatibility-decisions-and-limits).
+
+After the first successful GitHub runs, review their logs, notes, and skips.
+Then configure branch protection separately to require
+`Package check (Linux, R release)` before merging. Keep
+`Lint report (advisory)` optional while findings are reviewed incrementally.
+Adding these files does not enable required checks or alter repository settings.
+The maintainer still requests merges after review and testing.
 
 ## Clean up merged branches
 

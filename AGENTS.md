@@ -86,6 +86,19 @@ and numerical output as part of the public interface.
 See `CONTRIBUTING.md` for the contributor-facing workflow, `DEVELOPMENT.md` for
 the code/process guide, and `.github/pull_request_template.md` for review notes.
 
+## GitHub automation
+
+- Keep package validation in `.github/workflows/R-CMD-check.yaml` and advisory
+  lint reporting in `.github/workflows/lint.yaml`. Run only package-scoped code;
+  do not add `test-scripts/` scenarios or outputs to routine package CI.
+- Preserve strict suggested-dependency installation, vignette building, and the
+  package error/warning failure threshold. Lint findings remain advisory and
+  must not trigger automatic formatting or commits.
+- Retain diagnostic artifacts and report CI skips, notes, and setup failures.
+  Current-R Linux CI does not establish the supported R/compiler/platform matrix
+  or replace local scientific validation. Changing required checks or remote
+  branch protection is a separate repository-settings action.
+
 ## Scientific and behavioural guardrails
 
 - Do not change scientific defaults, parameter interpretation, equations, units,
