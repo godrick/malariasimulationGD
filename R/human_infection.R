@@ -915,10 +915,10 @@ calculate_treated <- function(
   }
   
   # Update liver stage drug effects
-  if(parameters$parasite == "vivax"){
+  if(parameters$parasite == "vivax" && any(parameters$drug_hypnozoite_efficacy > 0)){
     if(successfully_treated$successfully_treated_hypnozoites$size() > 0){
       variables$hypnozoites$queue_update(0, successfully_treated$successfully_treated_hypnozoites)
-      variables$ls_drug$queue_update(drug, successfully_treated$successfully_treated_hypnozoites)
+      variables$ls_drug$queue_update(successfully_treated$drugs_hypnozoites, successfully_treated$successfully_treated_hypnozoites)
       variables$ls_drug_time$queue_update(timestep, successfully_treated$successfully_treated_hypnozoites)
     }
   }
@@ -1005,11 +1005,11 @@ calculate_successful_treatments <- function(
   
   if(any(parameters$drug_hypnozoite_efficacy > 0)){
     effectively_treated_hypnozoites_index <- bernoulli_multi_p(parameters$drug_hypnozoite_efficacy[drugs])
-    successfully_treated_hypnozoites <- bitset_at(target, effectively_treated_hypnozoites_index)
-    successfully_treated_list <- c(
-      successfully_treated_list,
-      successfully_treated_hypnozoites = successfully_treated_hypnozoites
+    # These draws index the blood-stage successes, not the original target.
+    successfully_treated_list$successfully_treated_hypnozoites <- bitset_at(
+      successfully_treated, effectively_treated_hypnozoites_index
     )
+    successfully_treated_list$drugs_hypnozoites <- drugs[effectively_treated_hypnozoites_index]
   }
   
   successfully_treated_list

@@ -1,5 +1,10 @@
 # malariasimulationGD (development version)
 
+* Fix vivax treatment updates so liver-stage drug IDs and hypnozoite clearance
+  stay aligned with successfully treated people after blood-stage or early
+  treatment failures. Blood-only clinical treatment no longer requires a
+  liver-treatment result. Existing random draw order and probabilities are
+  retained; affected vivax treatment results are intentionally corrected.
 * Make the native mobility constructor regression work with installed packages.
   Developer workflow tests now run separately under `test-scripts/tests/`.
 * Correct package dependency declarations, dataset references, and namespace
