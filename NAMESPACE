@@ -58,13 +58,16 @@ export(set_spraying)
 export(set_tbv)
 export(steph_params)
 importFrom(MASS,mvrnorm)
+importFrom(R6,R6Class)
 importFrom(Rcpp,sourceCpp)
-importFrom(stats,qnorm)
-importFrom(stats,rbinom)
-importFrom(stats,rexp)
-importFrom(stats,rnorm)
-importFrom(stats,rpois)
-importFrom(stats,runif)
-importFrom(stats,uniroot)
-importFrom(stats,weighted.mean)
+importFrom(stats,
+  qnorm,
+  rbinom,
+  rexp,
+  rnorm,
+  rpois,
+  runif,
+  uniroot,
+  weighted.mean
+)
 useDynLib(malariasimulationGD, .registration = TRUE)

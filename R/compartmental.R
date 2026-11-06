@@ -233,7 +233,7 @@ create_compartmental_rendering_process <- function(renderer, solvers, parameters
       }
       if (parameters$individual_mosquitoes) {
         stage_totals <- if (is.null(parameters$cube)) {
-          setNames(row[ODE_INDICES], names(ODE_INDICES))
+          stats::setNames(row[ODE_INDICES], names(ODE_INDICES))
         } else {
           aquatic_stage_totals(row, parameters$cube)
         }

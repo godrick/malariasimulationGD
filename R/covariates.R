@@ -895,7 +895,7 @@ apply_node_contact_effect <- function(parameters, resolved_effect, node_index = 
       )
       list(
         node_covariates = data.frame(
-          setNames(list(values_chr), covariate),
+          stats::setNames(list(values_chr), covariate),
           stringsAsFactors = FALSE
         ),
         raw_contact_effect = as.numeric(raw_effect)
@@ -921,7 +921,7 @@ apply_node_contact_effect <- function(parameters, resolved_effect, node_index = 
       raw_effect <- unname(effect$level_multipliers[values_chr])
       list(
         node_covariates = data.frame(
-          setNames(list(values_chr), covariate),
+          stats::setNames(list(values_chr), covariate),
           stringsAsFactors = FALSE
         ),
         raw_contact_effect = as.numeric(raw_effect)
@@ -940,7 +940,7 @@ apply_node_contact_effect <- function(parameters, resolved_effect, node_index = 
       }
       list(
         node_covariates = data.frame(
-          setNames(list(values), covariate),
+          stats::setNames(list(values), covariate),
           scaled_distance = scaled_distance,
           stringsAsFactors = FALSE
         ),
@@ -977,7 +977,7 @@ apply_node_contact_effect <- function(parameters, resolved_effect, node_index = 
       raw_effect <- effect$bin_multipliers[bin_index]
       list(
         node_covariates = data.frame(
-          setNames(list(values), covariate),
+          stats::setNames(list(values), covariate),
           bin_index = as.integer(bin_index),
           bin_label = bin_label,
           stringsAsFactors = FALSE

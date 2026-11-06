@@ -2,6 +2,8 @@
 
 * Make the native mobility constructor regression work with installed packages.
   Developer workflow tests now run separately under `test-scripts/tests/`.
+* Correct package dependency declarations, dataset references, and namespace
+  qualification. Preserve the optional digest cache-key fallback.
 
 # malariasimulationGD 2.0.2
 

@@ -828,7 +828,7 @@ stationary_human_initializer_bind_libraries <- function(libraries) {
 
   variable_names <- names(libraries[[1L]]$variables)
   reference_timestep <- unname(do.call(c, lapply(libraries, function(x) x$reference_timestep)))
-  variables <- setNames(vector("list", length(variable_names)), variable_names)
+  variables <- stats::setNames(vector("list", length(variable_names)), variable_names)
 
   for (nm in variable_names) {
     variables[[nm]] <- unname(do.call(c, lapply(libraries, function(x) x$variables[[nm]])))

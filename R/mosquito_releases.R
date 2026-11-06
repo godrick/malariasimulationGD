@@ -382,7 +382,7 @@ create_mosquito_release_process <- function(
     stop("Internal error: release schedule contains an unknown genotype")
   }
 
-  species_lookup <- setNames(seq_along(parameters$species), parameters$species)
+  species_lookup <- stats::setNames(seq_along(parameters$species), parameters$species)
   if (!all(schedule$species %in% names(species_lookup))) {
     stop("Internal error: release schedule contains an unknown species")
   }
