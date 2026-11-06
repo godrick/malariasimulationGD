@@ -1,0 +1,24 @@
+# Advisory rules are explicit so changing lintr defaults cannot add new rules.
+linters: list(
+    assignment_linter = lintr::assignment_linter(),
+    brace_linter = lintr::brace_linter(),
+    commas_linter = lintr::commas_linter(),
+    equals_na_linter = lintr::equals_na_linter(),
+    indentation_linter = lintr::indentation_linter(indent = 2L),
+    infix_spaces_linter = lintr::infix_spaces_linter(),
+    line_length_linter = lintr::line_length_linter(length = 100L),
+    seq_linter = lintr::seq_linter(),
+    T_and_F_symbol_linter = lintr::T_and_F_symbol_linter(),
+    trailing_blank_lines_linter = lintr::trailing_blank_lines_linter(),
+    trailing_whitespace_linter = lintr::trailing_whitespace_linter()
+  )
+exclusions: list(
+    "R/RcppExports.R",
+    "inst/include",
+    "inst/doc",
+    "test-scripts",
+    "renv",
+    "packrat"
+  )
+encoding: "UTF-8"
+error_on_lint: FALSE

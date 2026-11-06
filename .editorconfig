@@ -1,0 +1,33 @@
+# Shared save settings for maintained files; this does not reformat the tree.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{R,r,Rmd,rmd}]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+[*.{yml,yaml,json}]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# Markdown uses trailing spaces for deliberate hard line breaks.
+[*.{md,Rmd,rmd}]
+trim_trailing_whitespace = false
+
+# Generated interfaces, vendored headers, and developer scenarios keep their
+# own settings. Do not edit generated files to satisfy the conventions.
+[{R/RcppExports.R,src/RcppExports.cpp,inst/include/**,inst/doc/**,test-scripts/**}]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_style = unset
+indent_size = unset
+tab_width = unset

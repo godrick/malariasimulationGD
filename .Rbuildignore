@@ -15,8 +15,12 @@ codecov.yml
 ^touchstone$
 ^test-scripts$
 ^tests/BASELINE.*\.md$
+^AGENTS\.md$
 ^CONTRIBUTING\.md$
 ^DEVELOPMENT\.md$
+^\.editorconfig$
+^\.lintr$
+^tests/LINT-BASELINE\.md$
 ^\.positai$
 ^\.claude$
 ^evidence_report_malariasimulationGD\.(Rmd|html)$
