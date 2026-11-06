@@ -1,23 +1,27 @@
-#' @title Configure scheduled mosquito genotype releases (hybrid mode)
+#' Schedule adult mosquito genotype releases
 #'
-#' @description
-#' Expand and validate a simple MGDrivE-like release specification for adult
-#' mosquito genotype releases in hybrid mosquito mode
-#' (`individual_mosquitoes = TRUE`). The expanded schedule is stored in
-#' `parameters$releases_schedule` and the original configuration is preserved in
-#' `parameters$releases`.
+#' Apply a release to the parameter list for the receiving node. A positive
+#' release requires an inheritance cube. Both native mosquito samplers accept
+#' releases. Males join the specified male genotype pool. Susceptible females
+#' are allocated among mate genotypes according to local male counts weighted
+#' by mating fitness (`cube$eta`). With no available mate of positive weight,
+#' they join the unmated pool. The ODE uses expected allocations and the
+#' stochastic sampler draws integer allocations. In legacy individual mode,
+#' female releases add susceptible individuals and males join the genotype pool.
 #'
-#' The release schedule is a data.frame with columns:
-#' `timestep`, `species`, `sex`, `genotype`, `count`.
-#'
-#' `releaseSex = "M"` updates the internal male genotype pool (males are not
-#' explicit individual agents in the current hybrid implementation).
-#' `releaseSex = "F"` releases susceptible adult females (`Sm`) as individual
-#' mosquitoes.
-#'
-#' @param parameters model parameters
-#' @param releases a release configuration list, or `NULL` to clear releases
-#' @return modified parameter list
+#' @param parameters Model parameters for the receiving population.
+#' @param releases A list specifying the first day (`releasesStart`, at least 1)
+#'   and total mosquitoes per event (`releaseCount`). `releasesNumber` defaults
+#'   to one event. Repeated events are spaced by at least one day, even when
+#'   `releasesInterval = 0`. For example, a start of 2, interval of 3 and two
+#'   events give days 2 and 5. `releaseSex` is `"M"` (default), `"F"`, or
+#'   `"both"`. For both sexes, the extra mosquito in an odd count is male.
+#'   Supply `releaseSpecies` for a multispecies model and `releaseGenotype`
+#'   when the cube has no `releaseType`. Pass `NULL` to clear the schedule.
+#' @return The parameters with the specification in `releases` and one row per
+#'   release day, species, sex and genotype in `releases_schedule`. Each row's
+#'   `count` is the number added at release.
+#' @seealso [run_metapop_simulation()]
 #' @export
 set_releases <- function(parameters, releases) {
   if (!is.list(parameters)) {

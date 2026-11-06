@@ -2,30 +2,37 @@
 % Please edit documentation in R/mosquito_releases.R
 \name{set_releases}
 \alias{set_releases}
-\title{Configure scheduled mosquito genotype releases (hybrid mode)}
+\title{Schedule adult mosquito genotype releases}
 \usage{
 set_releases(parameters, releases)
 }
 \arguments{
-\item{parameters}{model parameters}
+\item{parameters}{Model parameters for the receiving population.}
 
-\item{releases}{a release configuration list, or \code{NULL} to clear releases}
+\item{releases}{A list specifying the first day (\code{releasesStart}, at least 1)
+and total mosquitoes per event (\code{releaseCount}). \code{releasesNumber} defaults
+to one event. Repeated events are spaced by at least one day, even when
+\code{releasesInterval = 0}. For example, a start of 2, interval of 3 and two
+events give days 2 and 5. \code{releaseSex} is \code{"M"} (default), \code{"F"}, or
+\code{"both"}. For both sexes, the extra mosquito in an odd count is male.
+Supply \code{releaseSpecies} for a multispecies model and \code{releaseGenotype}
+when the cube has no \code{releaseType}. Pass \code{NULL} to clear the schedule.}
 }
 \value{
-modified parameter list
+The parameters with the specification in \code{releases} and one row per
+release day, species, sex and genotype in \code{releases_schedule}. Each row's
+\code{count} is the number added at release.
 }
 \description{
-Expand and validate a simple MGDrivE-like release specification for adult
-mosquito genotype releases in hybrid mosquito mode
-(\code{individual_mosquitoes = TRUE}). The expanded schedule is stored in
-\code{parameters$releases_schedule} and the original configuration is preserved in
-\code{parameters$releases}.
-
-The release schedule is a data.frame with columns:
-\code{timestep}, \code{species}, \code{sex}, \code{genotype}, \code{count}.
-
-\code{releaseSex = "M"} updates the internal male genotype pool (males are not
-explicit individual agents in the current hybrid implementation).
-\code{releaseSex = "F"} releases susceptible adult females (\code{Sm}) as individual
-mosquitoes.
+Apply a release to the parameter list for the receiving node. A positive
+release requires an inheritance cube. Both native mosquito samplers accept
+releases. Males join the specified male genotype pool. Susceptible females
+are allocated among mate genotypes according to local male counts weighted
+by mating fitness (\code{cube$eta}). With no available mate of positive weight,
+they join the unmated pool. The ODE uses expected allocations and the
+stochastic sampler draws integer allocations. In legacy individual mode,
+female releases add susceptible individuals and males join the genotype pool.
+}
+\seealso{
+\code{\link[=run_metapop_simulation]{run_metapop_simulation()}}
 }

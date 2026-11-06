@@ -25,11 +25,10 @@ equilibrium parameters and set up the initial human and mosquito population
 to achieve init_EIR
 }
 \details{
-For \code{individual_mosquitoes = TRUE}, \code{native_total_M}
-solves the continuous adult mosquito abundance needed to match the requested
-annual EIR. The initialized mosquito state is then integerized because the
-individual backend represents finite mosquitoes. Therefore realised initial
-EIR may differ slightly from requested \code{init_EIR}. The deterministic
-backend preserves the continuous target exactly; the stochastic individual
-backend preserves integer mosquito counts and reports the realised EIR.
+With \code{native_total_M = TRUE}, the native all-wild-type equilibrium
+gives the continuous adult abundance needed for the requested annual EIR.
+The ODE uses those continuous counts. The tau-leap sampler starts with whole
+mosquitoes, so rounding the initial counts can shift the realized EIR.
+This choice sets the starting population. Subsequent daily transmission
+depends on the simulated infectious mosquitoes and human exposure.
 }
