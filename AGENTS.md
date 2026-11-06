@@ -61,6 +61,12 @@ and numerical output as part of the public interface.
 - Keep changes small and reviewable. Separate formatting, maintenance, and
   scientific behavior changes where practical. Report the active branch,
   validation results, and outstanding limitations when handing work back.
+- When commits are requested, split the authorized changes into small, coherent
+  commits on the task branch. Use a plain-language title and a body explaining
+  what changed, why, and relevant validation or limitations. Review each staged
+  diff and include only the requested work; preserve unrelated user changes.
+  Report the resulting commit hashes. A commit request does not authorize a
+  push or merge.
 - Run the relevant tests on the development branch and allow the user to
   perform their own testing. Passing checks do not authorize a merge. Merge
   into `main` only after the user explicitly requests it following testing.
@@ -127,6 +133,13 @@ the code/process guide, and `.github/pull_request_template.md` for review notes.
 
 ## R implementation conventions
 
+- Read the shared `.editorconfig` and `.lintr` conventions. Linting is advisory;
+  report findings without automatically fixing or reformatting existing code.
+  Use `lintr::lint_package(".", cache = FALSE)` for package scope. Preserve
+  scientific/public names and do not change model behavior to satisfy a lint.
+- Preview `styler` changes on an individual maintained file with `dry = "on"`
+  before proposing formatting. Keep formatting changes separate and exclude
+  generated interfaces, vendored code, built documentation, and `test-scripts/`.
 - Follow the style of the surrounding file; avoid unrelated formatting changes.
 - Use explicit namespaces such as `stats::`, `utils::`, and `testthat::` where
   ambiguity is possible.

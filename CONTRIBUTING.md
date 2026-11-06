@@ -83,6 +83,86 @@ state, and test file before changing behavior. Use two-space indentation,
 namespaced calls where ambiguity is possible. Follow the surrounding file and
 avoid unrelated reformatting or renaming public functions, arguments, or outputs.
 
+### Shared conventions and advisory linting
+
+`.editorconfig` shares UTF-8, LF line endings, final newlines, and two-space
+indentation for R/R Markdown and YAML/JSON files with editors that support it.
+Markdown trailing spaces are preserved for deliberate hard line breaks. C++
+indentation is not standardized by this stage; follow the surrounding file.
+Generated interfaces, vendored headers, built documentation, and everything in
+`test-scripts/` opt out of these editor rules. Enabling editor support does not
+itself reformat existing files; review any save-time changes before committing.
+
+`.lintr` defines a small, explicit advisory rule set rather than inheriting
+every current or future default. It checks assignment, braces, commas, operator
+spacing, two-space indentation, a 100-character R line limit, trailing
+whitespace/newlines, `T`/`F` abbreviations, NA comparisons, and sequence patterns.
+The initial rules do not enforce object names, function length, pipe conversion,
+return style, or dynamic object usage. Preserve scientific symbols and public
+names. Lint findings are review prompts, not proof of a model bug or permission
+to change behavior.
+
+Install the developer tools into the selected library when needed:
+
+```r
+utils::install.packages(c("lintr", "styler"), lib = dev_lib, repos = repos)
+```
+
+From the repository root, report package findings without modifying source:
+
+```r
+lints <- lintr::lint_package(".", cache = FALSE)
+print(lints)
+length(lints)
+```
+
+`lint_package()` covers the package's R-code locations, including tests and
+vignettes; it does not lint C++ or R snippets inside ordinary `.md` files. The
+configuration explicitly excludes `R/RcppExports.R`, vendored/built files, and
+`test-scripts/`. Use this package command rather than recursively linting the
+whole developer workspace. Direct `lintr::lint()` calls target a file explicitly;
+keep the same scope when selecting one.
+
+Advisory mode is recorded with `error_on_lint: FALSE`. Existing findings do not
+block a commit or merge in this stage, and no CI or commit hook is added. Review
+new findings in the area being edited, keep any `# nolint: rule_name.` exception
+narrow and explained, and do not suppress whole maintained modules to reduce
+the count. See [the initial lint baseline](tests/LINT-BASELINE.md) for measured
+findings and tool versions. Future rule changes and enforced checks need their
+own reviewed update.
+
+### Preview formatting before applying it
+
+Use `styler` on one maintained file at a time and keep formatting in a separate
+change from scientific fixes. The [styler preview mode](https://styler.r-lib.org/reference/style_file.html)
+reports whether a file would change without writing it:
+
+```r
+styler::cache_deactivate(verbose = FALSE)
+styler::style_file(
+  "R/output_parameters.R", dry = "on", include_roxygen_examples = FALSE
+)
+```
+
+To inspect formatted text, write a candidate in a temporary directory:
+
+```r
+candidate_dir <- tempfile("malariasimulationGD-style-")
+dir.create(candidate_dir)
+candidate <- file.path(candidate_dir, "output_parameters.R")
+stopifnot(file.copy("R/output_parameters.R", candidate))
+styler::style_file(candidate, include_roxygen_examples = FALSE)
+cat(paste(readLines(candidate), collapse = "\n"))
+```
+
+Compare the candidate with the original, review the diff, and run the affected
+tests before accepting a later formatting change. The two tools are
+complementary: `styler` does not resolve every lint, such as long lines, and its
+exclusions do not automatically come from `.lintr`. Do not run a whole-tree
+formatter, format generated Rcpp interfaces or vendored code, or sweep the
+developer scenarios into a package-formatting change. No existing source was
+formatted when introducing these configuration files.
+
 Keep each change reviewable. Separate formatting and refactoring from changes
 to equations, defaults, timing, stochastic sampling, or model behavior. Follow
 the scientific and reproducibility requirements in [AGENTS.md](AGENTS.md).
@@ -198,6 +278,24 @@ Update `NEWS.md` for user-visible behavior changes and state expected numerical,
 stochastic, runtime, or compatibility effects. Keep internal implementation
 helpers unexported unless they intentionally become part of the public API.
 
+## Prepare small commits
+
+When the maintainer requests commits, group the authorized work into small,
+coherent commits on the task branch. Each commit should have one understandable
+purpose; keep a behavior change with its regression test and directly related
+documentation. Separate independent configuration, reporting, formatting, and
+scientific changes where practical, without splitting a working change into
+broken intermediate states.
+
+Write a short, plain-language title describing the result. Add a body explaining
+what changed, why it was needed, and the relevant checks or limitations. Avoid
+vague titles such as "updates" or "fixes". Review `git diff --cached` before each
+commit, stage only the intended files or hunks, and preserve unrelated user work
+and generated runtime outputs. Report the commit hashes and titles afterward.
+
+Committing requires an explicit request. A request to commit does not authorize
+pushing, merging, or rewriting existing history; those remain separate actions.
+
 ## Review and merge
 
 Report the branch name, changed behavior, tests run, scientific or numerical
@@ -213,8 +311,9 @@ commands were checked and which setup/download steps were not executed.
 For GitHub, the recommended repository policy is pull requests into `main`
 with required validation checks. Do not push development changes directly to
 `main`. Documenting this policy does not configure remote repository settings.
-Linting, formatting automation, and required CI checks are later workflow steps;
-the template itself does not run or enforce them.
+Shared lint/editor conventions are advisory. GitHub automation and required CI
+checks are a later workflow step; the template itself does not run or enforce
+them.
 
 ## Clean up merged branches
 
