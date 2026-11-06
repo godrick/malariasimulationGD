@@ -817,12 +817,24 @@ mosquito_restore_initial_state_table <- function(backends, initial_state, parame
 #' @param sampler `"ode"` or `"tau"`.
 #' @param releases optional data frame with `timestep`, `node`, `species`,
 #' `stage`, `genotype`, `count`, and optional `substage`, `mate_genotype`.
-#' @param initial_state `NULL`, or a checkpoint returned in `state`.
+#' @param initial_state `NULL` for equilibrium initialization, a starting count
+#'   table, or a checkpoint returned in `state`. Resume with the same sampler
+#'   and state layout. A tau checkpoint also restores its saved R RNG state.
 #' @param return_state whether to include a resumable state checkpoint.
 #' @param seed optional R RNG seed used for `sampler = "tau"`.
 #'
-#' @return A list with `counts`, `state_counts`, `releases`, `state`, and
-#' `metadata`.
+#' @details Releases take effect at a timestep boundary before its counts are
+#'   recorded. Output includes the starting boundary (day zero or the checkpoint
+#'   day). When resuming, supply only outstanding releases: a row dated on
+#'   the checkpoint day is applied again if supplied again.
+#' @return A list with `counts` by timestep, node, species, stage and genotype.
+#'   `state_counts` also retains aquatic substages and adult female mating
+#'   details. `releases` holds the normalized input, `state` the optional
+#'   checkpoint, and `metadata` the sampler, labels, units and timing.
+#' @examples
+#' p <- get_mosquito_parameters(list(total_M = 50))
+#' run <- run_mosquito_simulation(2L, p, sampler = "tau", seed = 42L)
+#' sort(unique(run$counts$timestep))  # Includes the initial population on day 0
 #' @export
 run_mosquito_simulation <- function(
   timesteps,

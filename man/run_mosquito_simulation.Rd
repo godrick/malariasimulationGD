@@ -25,19 +25,34 @@ list of such objects for a network.}
 \item{releases}{optional data frame with \code{timestep}, \code{node}, \code{species},
 \code{stage}, \code{genotype}, \code{count}, and optional \code{substage}, \code{mate_genotype}.}
 
-\item{initial_state}{\code{NULL}, or a checkpoint returned in \code{state}.}
+\item{initial_state}{\code{NULL} for equilibrium initialization, a starting count
+table, or a checkpoint returned in \code{state}. Resume with the same sampler
+and state layout. A tau checkpoint also restores its saved R RNG state.}
 
 \item{return_state}{whether to include a resumable state checkpoint.}
 
 \item{seed}{optional R RNG seed used for \code{sampler = "tau"}.}
 }
 \value{
-A list with \code{counts}, \code{state_counts}, \code{releases}, \code{state}, and
-\code{metadata}.
+A list with \code{counts} by timestep, node, species, stage and genotype.
+\code{state_counts} also retains aquatic substages and adult female mating
+details. \code{releases} holds the normalized input, \code{state} the optional
+checkpoint, and \code{metadata} the sampler, labels, units and timing.
 }
 \description{
 Simulates mosquito eggs, larvae, pupae, adult males, unmated adult females,
 and mated adult females by genotype without creating human or mosquito
 infection compartments. \code{sampler = "ode"} uses the native deterministic
 entomology engine; \code{sampler = "tau"} uses a native entomology-only tau step.
+}
+\details{
+Releases take effect at a timestep boundary before its counts are
+recorded. Output includes the starting boundary (day zero or the checkpoint
+day). When resuming, supply only outstanding releases: a row dated on
+the checkpoint day is applied again if supplied again.
+}
+\examples{
+p <- get_mosquito_parameters(list(total_M = 50))
+run <- run_mosquito_simulation(2L, p, sampler = "tau", seed = 42L)
+sort(unique(run$counts$timestep))  # Includes the initial population on day 0
 }
