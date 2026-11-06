@@ -385,6 +385,9 @@ build_native_epi_indices <- function(G, nNodes, nE, nL, nP, nEIP) {
   pup_ix <- take_block(nP * G * nNodes, c(nP, G, nNodes))
   male_ix <- take_block(G * nNodes, c(G, nNodes))
   unm_ix <- take_block(G * nNodes, c(G, nNodes))
+  # Keep the mother's and mate's genotypes separately for inheritance. The third
+  # axis is female infection state (S, EIP substages, I), and the fourth is node.
+  # The C++ constructors consume these one-based offsets in R array order.
   fem_ix <- take_block(G * G * nStages * nNodes, c(G, G, nStages, nNodes))
 
   hS_ix <- integer(nNodes)
@@ -769,6 +772,8 @@ native_integerise_counts_preserve_total <- function(expected_counts) {
     stop("Native stochastic mosquito initialization received invalid expected counts.", call. = FALSE)
   }
 
+  # Rounding each substage independently could change the stage total. Assign
+  # the remaining mosquitoes by fractional size, without drawing random numbers.
   total <- round(sum(expected_counts))
   counts <- floor(expected_counts)
   remainder <- as.integer(total - sum(counts))
@@ -954,6 +959,8 @@ native_apply_release_to_state <- function(state, model, sex, genotype_idx, count
   }
 
   male_counts <- native_extract_summary(state, model, node = node)$male
+  # A released female enters the susceptible class with a mate genotype if she
+  # can mate here. Her mate affects her offspring even if she moves later.
   mate_weights <- as.numeric(model$shared$eta[genotype_idx, ]) * as.numeric(male_counts)
   if (sum(mate_weights) > 0) {
     probs <- mate_weights / sum(mate_weights)
@@ -1116,6 +1123,8 @@ NativeMosquitoSolver <- R6::R6Class(
       }
       pending$stepped[[self$model$node]] <- TRUE
       self$model$shared$pending_inputs <- pending
+      # Node solvers are views of one species-wide state. Only the last node
+      # advances it, after every node supplied its inputs for this same day.
       if (all(pending$stepped)) {
         native_execute_shared_step(self$model$shared)
       }
@@ -1145,6 +1154,8 @@ NativeMosquitoSolver <- R6::R6Class(
       invisible(NULL)
     },
     save_state = function() {
+      # Node 1 saves the whole network for this species. The other views
+      # point to that same state again when their solvers are rebuilt.
       if (self$model$node != 1L) {
         return(NULL)
       }
@@ -1255,6 +1266,8 @@ native_build_shared_backend <- function(parameters, species_i, timesteps) {
   model_type <- 1L
   # The native backend keeps human infection in the outer msimGD shell, so the
   # native human block is only used as a carrier for mosquito-side FOIM.
+  # Human infections are resolved by the individual model. It applies the
+  # mosquito-to-human multiplier there; cube$c acts here on mosquito acquisition.
   b_vec <- rep(0, cube_info$G)
   c_vec <- native_align_cube_vec(if (is.null(cube)) NULL else cube$c, cube_info$genotypesID, 1)
 

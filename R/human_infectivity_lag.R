@@ -225,6 +225,8 @@ human_infectivity_lag_calculate_reservoir <- function(context, timestep) {
       stop("Human biting weights must be nonnegative and finite.", call. = FALSE)
     }
 
+    # Read each resident's delayed infectiousness from their home record, then
+    # count their contribution where mosquitoes can bite them today.
     lagged_infectivity <- context$buffers[[home_node]]$get(timestep - params$delay_gam)
     numerator <- numerator + human_infectivity_lag_sum_by_node(
       weights * lagged_infectivity,

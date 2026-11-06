@@ -492,6 +492,9 @@ void stoch_epi_do_step(StochEpiParams* p, double* state, double t, double dt) {
   for (int i = 0; i < nFS * nM; i++)
     dFS[i] -= F_mort[i];
 
+  // Draw each origin-to-destination flow from the counts at the start of
+  // this substep. Accumulate both ends in the deltas so arrivals can first
+  // contribute to departures in the next substep.
   // ---- Mosquito movement ----
   if (p->has_move) {
     for (int origin = 0; origin < nM; origin++) {

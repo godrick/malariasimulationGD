@@ -744,6 +744,8 @@ static void epi_compute_derivs(EpiEngine* eng, double t, double* y, double* ydot
     }
   }
 
+  // Each column is a node. Multiplying departure rates by the origin-by-
+  // destination matrix gives arrivals in the matching adult compartment.
   // ---- Movement (mosquito) ----
   if (eng->has_move) {
     for (int k = 0; k < nM; k++)

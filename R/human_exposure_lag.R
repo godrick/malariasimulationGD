@@ -531,6 +531,8 @@ human_exposure_lag_destination_shares <- function(context, destination_node, spe
   lapply(shares, function(x) x / total_weight)
 }
 
+# Allocate a destination's bites among the people present there today. Store
+# each share by home node and person so a later return trip preserves exposure.
 human_exposure_lag_allocate_exposure <- function(context, timestep, node_exposure, node_weighted_exposure = NULL) {
   exposure_by_home <- lapply(
     context$parameters,
