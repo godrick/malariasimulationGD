@@ -17,7 +17,8 @@ and numerical output as part of the public interface.
 - `tests/testthat/`: unit, integration, regression, and end-to-end tests.
 - `tests/performance/`: profiling and performance-related code.
 - `test-scripts/`: runnable simulations, examples, calibration workflows, and
-  generated outputs. This directory is excluded from package builds.
+  generated outputs for developer scientific exploration. The entire directory
+  is excluded from the distributed package and is not required by package tests.
 - `test-scripts/seven_node_example/`: compact metapopulation example.
 - `test-scripts/Busia_landscape/`: larger landscape workflows that may be
   computationally expensive.
@@ -28,7 +29,9 @@ and numerical output as part of the public interface.
 ## Before making changes
 
 1. Read `DESCRIPTION`, the relevant implementation, and nearby tests.
-2. Check `git status` and preserve all existing user changes.
+2. Check `git status` and the current branch, and preserve all existing user
+   changes. Create or select a task branch before editing; never develop
+   directly on `main`.
 3. Identify whether the change affects:
    - the human infection model;
    - mosquito population or genotype dynamics;
@@ -40,8 +43,39 @@ and numerical output as part of the public interface.
    - stochastic reproducibility;
    - generated documentation or Rcpp interfaces.
 4. Prefer a focused change over broad refactoring.
-5. Do not commit, push, create branches, or rewrite history unless explicitly
-   requested.
+5. Routine creation of separate `codex/<topic>` development branches is
+   authorized by the user. Do not commit, push, merge, or rewrite history unless
+   explicitly requested.
+
+## Git branches, review, and cleanup
+
+- Start each distinct task on a separate branch, normally `codex/<topic>` based
+  on `main`. Reuse an existing task branch only for work within that same scope.
+  Check branch names before editing and do not overwrite an existing branch.
+- Keep `main` stable. If related uncommitted work is already on `main`, preserve
+  it while creating the task branch before continuing. Do not discard, reset,
+  or automatically stash changes to switch branches; isolate unrelated work
+  without moving it into the new task.
+- Keep changes small and reviewable. Separate formatting, maintenance, and
+  scientific behavior changes where practical. Report the active branch,
+  validation results, and outstanding limitations when handing work back.
+- Run the relevant tests on the development branch and allow the user to
+  perform their own testing. Passing checks do not authorize a merge. Merge
+  into `main` only after the user explicitly requests it following testing.
+- Do not push directly to `main` or delete a development branch before its work
+  has been merged and the merge verified.
+- After an explicitly requested merge, routine cleanup of fully merged local
+  task branches is authorized unless the user asks to retain them. List
+  candidates with `git branch --merged main` and verify that each selected
+  branch tip is an ancestor of `main`. Check for uncommitted work and linked
+  worktrees before deleting anything. Delete eligible local branches with
+  `git branch -d`, never automatic force deletion with `-D`.
+- Preserve `main`, the current branch, branches with unmerged work, and branches
+  still used by another worktree. Leave ambiguous or squash-merged branches for
+  review rather than forcing deletion. Remote branch deletion requires an
+  explicit request as well.
+
+See `CONTRIBUTING.md` for the contributor-facing workflow.
 
 ## Scientific and behavioural guardrails
 
@@ -167,6 +201,12 @@ R CMD check --no-manual --no-build-vignettes .
 
 Additional expectations:
 
+- Package tests must work from an installed package without reading files in
+  `R/`, `src/`, `test-scripts/`, or another checkout. Test behavior or capture
+  interface arguments instead of inspecting source text.
+- Keep tests of developer scenarios and external calibration workflows under
+  `test-scripts/tests/`. If they expose a package bug, add a small self-contained
+  regression under `tests/testthat/` as well.
 - Add a regression test for every corrected bug when practical.
 - Test invalid inputs as well as the successful path.
 - For stochastic logic, test invariants or distributions rather than one
@@ -180,6 +220,21 @@ Additional expectations:
 - Do not weaken unrelated assertions to accommodate a change.
 
 ## Runnable examples and large workflows
+
+Developer-only workflow tests can be run separately with:
+
+```sh
+Rscript test-scripts/tests/run_tests.R '^four-node-linear-example$'
+```
+
+Package dependency declarations cover package code, package tests, and shipped
+documentation. Record dependencies used only for developer scenarios in that
+workflow's README instead of adding them to the package `DESCRIPTION`.
+
+For a bounded package check that also skips execution of vignette simulations,
+use `R CMD check --no-manual --no-build-vignettes --no-vignettes`. The
+`--no-build-vignettes` flag alone still permits vignette code to run. Check
+user-facing vignette builds separately before a release.
 
 Use the minimal or quick examples before running large landscape workflows:
 

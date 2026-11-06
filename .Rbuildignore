@@ -15,6 +15,7 @@ codecov.yml
 ^touchstone$
 ^test-scripts$
 ^tests/BASELINE.*\.md$
+^CONTRIBUTING\.md$
 ^\.positai$
 ^\.claude$
 ^evidence_report_malariasimulationGD\.(Rmd|html)$
