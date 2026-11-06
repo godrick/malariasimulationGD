@@ -6,10 +6,13 @@
 #' @param parameters the model parameters
 #' @param age_group age breaks for population size outputs; default = NULL
 #' @param incidence age breaks for incidence outputs (D+Tr+A); default = NULL
-#' @param clinical_incidence age breaks for clinical incidence outputs (symptomatic); default = c(0, 1825)
+#' @param clinical_incidence Age breaks for clinical incidence outputs
+#'   (symptomatic); default = `c(0, 1825)`.
 #' @param severe_incidence age breaks for severe incidence outputs (pf only); default = NULL
-#' @param prevalence age breaks for clinical prevalence outputs (pcr and lm detectable infections); default = c(730, 3650)
-#' @param n_with_hypnozoites age breaks for individuals with hypnozoites outputs (pv only); default = NULL
+#' @param prevalence Age breaks for clinical prevalence outputs (PCR and LM
+#'   detectable infections); default = `c(730, 3650)`.
+#' @param n_with_hypnozoites Age breaks for individuals with hypnozoite outputs
+#'   (Pv only); default is `NULL`.
 #' @param ica age breaks for average acquired clinical immunity; default = NULL
 #' @param icm age breaks for average maternal clinical immunity; default = NULL
 #' @param iva age breaks for average acquired severe immunity (pf only); default = NULL
