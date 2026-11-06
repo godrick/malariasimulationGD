@@ -1,7 +1,7 @@
 testthat::skip_if_not_installed("pkgload")
 
-scripts_root <- normalizePath(file.path(testthat::test_path(), "../../.."), mustWork = TRUE)
-repo_root <- dirname(scripts_root)
+scripts_root <- developer_integration_scripts_root()
+repo_root <- developer_integration_repo_root()
 
 required_full_repo_paths <- c(
   file.path(repo_root, "DESCRIPTION"),
@@ -11,8 +11,8 @@ required_full_repo_paths <- c(
 if (!all(file.exists(required_full_repo_paths))) {
   testthat::skip(
     paste(
-      "Full customMGDrive2 malaria-sim-epi integration fixtures are not",
-      "bundled with this isolated package share."
+      "Required external malaria-sim-epi integration fixtures are not",
+      "available for this developer workflow."
     )
   )
 }

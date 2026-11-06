@@ -1,4 +1,4 @@
-scripts_root <- normalizePath(file.path(testthat::test_path(), "../../.."), mustWork = TRUE)
+scripts_root <- developer_integration_scripts_root()
 
 required_full_repo_paths <- c(
   file.path(scripts_root, "msimGD", "test-scripts", "malaria-sim-epi", "ochomo_seasonality_utils.R"),
@@ -8,8 +8,8 @@ required_full_repo_paths <- c(
 if (!all(file.exists(required_full_repo_paths))) {
   testthat::skip(
     paste(
-      "Full customMGDrive2 malaria-sim-epi integration fixtures are not",
-      "bundled with this isolated package share."
+      "Required external malaria-sim-epi integration fixtures are not",
+      "available for this developer workflow."
     )
   )
 }

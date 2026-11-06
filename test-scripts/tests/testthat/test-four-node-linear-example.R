@@ -1,9 +1,9 @@
 four_node_test_root <- normalizePath(
-  file.path(testthat::test_path(), "../../test-scripts/four_node_linear"),
+  file.path(developer_test_repo(), "test-scripts/four_node_linear"),
   mustWork = FALSE
 )
 if (!file.exists(file.path(four_node_test_root, "config.R"))) {
-  testthat::skip("Four-node example sources are excluded from package builds.")
+  testthat::skip("Four-node developer example sources are not available.")
 }
 four_node_test_env <- new.env(parent = globalenv())
 sys.source(file.path(four_node_test_root, "config.R"), four_node_test_env)

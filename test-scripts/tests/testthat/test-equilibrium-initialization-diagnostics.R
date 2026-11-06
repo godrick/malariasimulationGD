@@ -1,10 +1,9 @@
-# The diagnostic helpers live outside the built package. Pure helper tests run
-# locally; packaged checks skip explicitly when example sources are not bundled.
-eqd_repo <- normalizePath(file.path(testthat::test_path(), "../.."), mustWork = TRUE)
+# These optional diagnostic helpers belong to the developer workspace.
+eqd_repo <- developer_test_repo()
 eqd_root <- file.path(eqd_repo, "test-scripts/Godrick_calibration")
 eqd_dir <- file.path(eqd_root, "diagnostics")
 if (!file.exists(file.path(eqd_dir, "config.R"))) {
-  testthat::skip("Godrick diagnostic sources are excluded from package builds.")
+  testthat::skip("Optional Godrick diagnostic sources are not available.")
 }
 eqd_test_env <- new.env(parent = globalenv())
 for (f in c("config.R", "simulation.R", "analysis.R", "legacy_equilibrium.R")) sys.source(file.path(eqd_dir, f), eqd_test_env)

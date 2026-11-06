@@ -1,8 +1,19 @@
-# msimGD Share Examples
+# Developer scenarios and scientific validation
 
-This directory is intentionally small and self-contained. It is ignored by
-`R CMD build` through the package `.Rbuildignore`, so it can hold local example
-outputs without changing the package build.
+This directory is the developer workspace for exploring scenarios, calibration,
+scientific questions, and model validity. Its scripts, examples, local data,
+plots, and generated outputs are excluded from `R CMD build` by `.Rbuildignore`
+and do not ship in the final package. Keep generated outputs out of version
+control and avoid overwriting existing scientific results.
+
+Package regressions belong in `tests/testthat/` and must run independently of
+this workspace. Tests specific to developer workflows live in `tests/` within
+this directory; see [the developer test runner](tests/README.md).
+
+Dependencies used only here belong in each workflow's documentation, rather
+than the package `DESCRIPTION`. Install them in an isolated development library
+when needed. `install_local.R` installs into the default library, so review that
+choice before running it.
 
 Examples:
 
@@ -18,11 +29,12 @@ Examples:
 From the package root:
 
 ```sh
-Rscript test-scripts/install_local.R
 Rscript test-scripts/run_minimal_release_example.R
 Rscript test-scripts/seven_node_example/quick/00_run_quick.R
 Rscript test-scripts/seven_node_example/quick/01_plot_quick.R
 ```
 
-These examples do not read calibration files, saved outputs, CHIRPS files, or
-analysis artifacts from the original working repository.
+Install the current checkout into an isolated R library before running examples.
+The minimal and seven-node examples use generated inputs; other developer
+workflows can require optional local data or calibration artifacts. Consult
+their READMEs before running them.
