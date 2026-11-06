@@ -222,7 +222,7 @@ translate_parameters <- function(params) {
 #' @noRd
 translate_vivax_parameters <- function(params) {
   translated <- params
-  for (i in 1:length(vivax_translations)) {
+  for (i in seq_along(vivax_translations)) {
     if (is.character(vivax_translations[[i]])) {
       translated[[names(vivax_translations)[i]]] <- params[[vivax_translations[[i]]]]
     }
