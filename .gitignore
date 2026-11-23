@@ -71,3 +71,5 @@ evidence_report_malariasimulationGD.Rmd
 test-scripts/Busia_landscape/lib/msimGD_truth_generation.R
 test-scripts/Busia_landscape/lib/msimGD_truth_generation.R
 /test-scripts/busia-annual-recalibration
+/test-scripts/busia-burnin-diagnostic-20261123
+/test-scripts/busia-calibration-figure
